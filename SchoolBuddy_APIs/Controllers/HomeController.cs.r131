@@ -1,0 +1,339 @@
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
+using SchoolBuddy_APIs.Database_methods;
+using SchoolBuddy_APIs.Models;
+using SchoolBuddy_APIs.Models.Dashboard;
+using SchoolBuddy_APIs.Models.Indoor_Tracking.Visitors_Details;
+using SchoolBuddy_APIs.Models.Login;
+using SchoolBuddy_APIs.Models.Master.Students;
+using System.Data;
+using System.Data.SqlClient;
+
+namespace SchoolBuddy_APIs.Controllers
+{
+    [Route("api/[controller]/[action]")]
+    [ApiController]
+    public class HomeController : ControllerBase
+    {
+        private readonly Idatabase_access _sql_qury_execution;
+        public HomeController(Idatabase_access sql_qury_execution)
+        {
+            _sql_qury_execution = sql_qury_execution;
+        }
+
+        [HttpPost]
+        public IActionResult GetAllCards(getalldata getalldata)
+        {
+            try
+            {
+                string user_id = getalldata.user_id;
+                string json = "";
+                if (user_id != null)
+                {
+                    string query = $"select * from bs_cards_master where Sys_User_Id = '{user_id}'";
+                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    if (datatable != null)
+                    {
+                        if (datatable.Rows.Count > 0)
+                        {
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            return Content(json, "application/json");
+                        }//datatable has rows
+                        else
+                        {
+                            return Content("Data Not Found", "application/json");
+                        }//datatable has no rows
+                    }//datatable is not null
+
+                    return Content("Something Went Wrong", "application/json");
+
+                }//user is not equal to null.
+                else
+                {
+                    return Content("Login Again..", "application/json");
+                }//user id null.
+            }//try block ends.
+            catch (Exception ex)
+            {
+                string err_msg = ex.Message;
+                return Content(err_msg, "application/json");
+
+            }//catch block ends.
+
+        }
+         
+        [HttpPost]
+        public bool deleteCards(getCardById card_id)
+        {
+            try
+            {
+                var id = card_id.card_Id;
+                
+                string query = $"delete from bs_cards_master where Id= {id}";
+                bool result = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                if (result)
+                {
+                    //result = true;
+                    return true;
+                }
+                else
+                {
+                    //result = false;
+                    return false;
+                }
+                //return false;
+
+            }//try block ends.
+            catch (Exception ex)
+            {
+                string err_msg = ex.Message;
+                return false;
+
+            }//catch block ends.
+        }
+
+        [HttpPost]
+        public bool addCards(addCards card)
+        {
+            try
+            {
+                var name = card.name;
+                var rfid = card.RFID;
+                string query = $"insert into bs_cards_master(Name,RFID) values('{name}'', {rfid})";
+                bool result = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                if (result)
+                {
+                    //result = true;
+                    return true;
+                }
+                else
+                {
+                    //result = false;
+                    return false;
+                }
+                //return false;
+
+            }//try block ends.
+            catch (Exception ex)
+            {
+                string err_msg = ex.Message;
+                return false;
+
+            }//catch block ends.
+        }
+
+        [HttpPost]
+        public int Login(Login login)
+        {
+            try
+            {
+                var username = login.username;
+                var password = login.password;
+                string query = $"select id,sys_username,sys_password from users where sys_username = '{username}' and sys_password='{password}'";
+                DataTable datatable = _sql_qury_execution.DML_Select(query);
+                if (datatable!=null)
+                {
+                    if (datatable.Rows.Count>0)
+                    {
+                        return Convert.ToInt32(datatable.Rows[0]["id"]);
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                }
+                return -1;
+
+            }
+            catch (Exception ex)
+            {
+                return -1;
+            }
+
+
+        }
+
+        [HttpPost]
+        public IActionResult GetAllStudentDetails(getallstudents getallstudents)
+        {
+            try
+            {
+                string user_id = getallstudents.user_id;
+                string json = "";
+                if (user_id != null)
+                {
+                    string query = $"select * from bs_all_students where user_id = '{user_id}'";
+                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    if (datatable != null)
+                    {
+                        if (datatable.Rows.Count > 0)
+                        {
+                            json = JsonConvert.SerializeObject(datatable,Formatting.Indented);
+                            return Content(json, "application/json");
+                        }//datatable has rows
+                        else
+                        {
+                            return Content("Data Not Found", "application/json");
+                        }//datatable has no rows
+                    }//datatable is not null
+
+                    return Content("Something Went Wrong", "application/json");
+
+                }//user is not equal to null.
+                else
+                {
+                    return Content("Login Again..", "application/json");
+                }//user id null.
+            }//try block ends.
+            catch (Exception ex)
+            {
+                string err_msg = ex.Message;
+                return Content(err_msg, "application/json");
+
+            }//catch block ends.
+
+        }
+
+
+        [HttpPost]
+        public int GetTotalStudentCount(getallstudents getallstudents)
+        {
+            try
+            {
+                string user_id = getallstudents.user_id;
+                string json = "";
+                if (user_id != null)
+                {
+                    string query = $"select count(*) from bs_all_students where user_id = '{user_id}'";
+                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    if (datatable != null)
+                    {
+                        if (datatable.Rows.Count > 0)
+                        {
+                            return Convert.ToInt32(datatable.Rows[0][0]);
+                        }//datatable has rows
+                        else
+                        {
+                            return 0;
+                        }//datatable has no rows
+                    }//datatable is not null
+
+                    return 0;
+
+                }//user is not equal to null.
+                else
+                {
+                    return 0;
+                }//user id null.
+            }//try block ends.
+            catch (Exception ex)
+            {
+                string err_msg = ex.Message;
+                return 0;
+
+            }//catch block ends.
+
+        }
+
+
+
+        [HttpPost]
+        //Edit the student details and saving the edited record.
+        public bool EditStudent(getstudent students)
+        {
+            string json = "";
+            try
+            {
+                #region EDIT QUERY
+                string query = $"update bs_all_students set ad_no = '{students.ad_no}',name = '{students.name}',";
+                query += $"gender ='{students.gender}',birth = '{students.birth}',class='{students.Class}',";
+                query += $"division = '{students.division}',parent_name = '{students.parent_name}',mobile = '{students.mobile}',";
+                query += $"pwd = '{students.pwd}',address='{students.address}',rfid = '{students.rfid}',email = '{students.email}',";
+                query += $"relation_with_std = '{students.relation_with_std}',blood_group = '{students.blood_group}',qrcode = '{students.qrcode}' ";
+                query += $"where id = {students.id}";
+                #endregion
+
+                bool result = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                if (result)
+                {
+                    //result = true;
+                    return true;
+                }
+                else
+                {
+                    //result = false;
+                    return false;
+                }
+               //return false;
+                
+            }//try block ends.
+            catch (Exception ex)
+            {
+                string err_msg = ex.Message;
+                return false;
+
+            }//catch block ends.
+
+        }
+
+        [HttpPost]
+        //Edit the student details and saving the edited record.
+        public IActionResult GetStudentById(getstudentbyid std)
+        {
+            string json = "";
+            try
+            {
+                #region GETSTUDENTBYID QUERY
+                string query = $"select * from bs_all_students where id = '{std.student_id}'";
+                #endregion
+
+                DataTable dataTable = _sql_qury_execution.DML_Select(query);
+                if (dataTable != null)
+                {
+                    if (dataTable.Rows.Count > 0)
+                    {
+
+                        json = JsonConvert.SerializeObject(new getstudent
+                        {
+                            id = Convert.ToInt32(dataTable.Rows[0]["id"]),
+                            name = dataTable.Rows[0]["name"].ToString(),
+                            Class = dataTable.Rows[0]["class"].ToString(),
+                            ad_no = dataTable.Rows[0]["ad_no"].ToString(),
+                            gender = dataTable.Rows[0]["gender"].ToString(),
+                            birth = dataTable.Rows[0]["birth"].ToString(),
+                            division = dataTable.Rows[0]["division"].ToString(),
+                            parent_name = dataTable.Rows[0]["parent_name"].ToString(),
+                            mobile = dataTable.Rows[0]["mobile"].ToString(),
+                            pwd = dataTable.Rows[0]["pwd"].ToString(),
+                            address = dataTable.Rows[0]["address"].ToString(),
+                            created_date = dataTable.Rows[0]["created_date"].ToString(),
+                            rfid = dataTable.Rows[0]["rfid"].ToString(),
+                            email = dataTable.Rows[0]["email"].ToString(),
+                            relation_with_std = dataTable.Rows[0]["relation_with_std"].ToString(),
+                            blood_group = dataTable.Rows[0]["blood_group"].ToString(),
+                            qrcode= dataTable.Rows[0]["qrcode"].ToString()
+
+                        }) ;
+                        return Content(json, "application/json");
+                    }//datatable has rows
+                    else
+                    {
+                        return Content("Data Not Found", "application/json");
+                    }//datatable has no rows
+                }
+
+                return Content("Data Not Found", "application/json");
+            }//try block ends.
+            catch (Exception ex)
+            {
+                string err_msg = ex.Message;
+                return Content("Something went wrong", "application/json");
+
+            }//catch block ends.
+
+        }
+
+    }
+}

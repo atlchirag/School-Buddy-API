@@ -1,0 +1,237 @@
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using SchoolBuddy_APIs.Database_methods;
+using SchoolBuddy_APIs.Models.Parent_Complain_Record;
+using System.Data;
+using System.Reflection.Metadata.Ecma335;
+
+namespace SchoolBuddy_APIs.Controllers
+{
+    [Route("api/[controller]/[action]")]
+    [ApiController]
+    public class ComplaintController : ControllerBase
+    {
+        private readonly Idatabase_access _sql_qury_execution;
+        public ComplaintController(Idatabase_access sql_qury_execution)
+        {
+            _sql_qury_execution = sql_qury_execution;
+        }
+
+        public class Complaint
+        {
+            public int Id { get; set; }
+            public string ComplaintText { get; set; }
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Complaint>>> GetComplaints()
+        {
+            string query = "SELECT id, complaint FROM bs_complaint_master";
+
+            // Execute the query and fetch data
+            DataTable result = _sql_qury_execution.DML_Select(query);
+
+            // Map the result to a list of Complaint objects
+            var complaints = new List<Complaint>();
+            foreach (DataRow row in result.Rows)
+            {
+                complaints.Add(new Complaint
+                {
+                    Id = row.Field<int>("id"),
+                    ComplaintText = row.Field<string>("complaint")
+                });
+            }
+
+            return Ok(complaints);
+        }
+
+
+        [HttpPost]
+        public async Task<IActionResult> CreateParentComplaint([FromBody] ParentComplaintRequest request)
+        {
+            try
+            {
+                if (request == null || string.IsNullOrWhiteSpace(request.Description))
+                {
+                    return BadRequest(new { status = "0", msg = "Invalid input" });
+                }
+
+                string query = $"INSERT INTO bs_parent_complaint (complaint_id, bs_user_id, description, raised_on, is_active) " +
+                               $"VALUES ('{request.ComplaintId}', '{request.BsUserId}', '{request.Description}', '{DateTime.Now:yyyy-MM-dd HH:mm:ss}', 1)";
+
+                int rowsAffected = _sql_qury_execution.DML_Insert_Update_Delete(query);
+
+                if (rowsAffected > 0)
+                {
+                    return Ok(new { status = "1", msg = "Complaint successfully created" });
+                }
+                else
+                {
+                    return StatusCode(500, new { status = "0", msg = "Failed to insert complaint" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { status = "0", msg = "An error occurred", error = ex.Message });
+            }
+        }
+
+        public class ParentComplaintRequest
+        {
+            public int ComplaintId { get; set; }
+            public int BsUserId { get; set; }
+            public string Description { get; set; }
+        }
+
+
+
+
+         [HttpPost]
+
+        ///<summary>
+        /// GetPendingComplaint actionmethod fetches pending request from the tables.
+        ///if database is newtrack, table used : telemetry_month.
+        ///if database is alttracking, table used : tbl_telemetry_month.
+        ///</summary>
+        public IActionResult GetPendingComplaint(string user_id)
+        {
+            try
+            {
+                //string user_id = getallstudents.user_id;
+                string json = "";
+                //if (user_id != null)
+                {
+                    //string query = $"select name from bs_all_students where user_id = '{user_id}'";
+                    string query = @"select  p.id,p.description,p.raised_on,s.student_name,r.route_name,c.complaint,s.mobile_no1 
+                                        from bs_parent_complaint p 
+                                        inner join bs_student_master_backup s 
+                                        on s.bs_user_id= p.bs_user_id 
+                                        inner join bs_route_students rs on 
+                                        rs.student_id = s.id inner join bs_route_master r on r.id = rs.route_id 
+                                        inner join tbl_users u on u.id = r.sys_user_id
+                                        inner join bs_complaint_master c on c.id=p.complaint_id  where p.is_active = 1 and u.id = " + user_id + " order by p.id";
+
+                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    if (datatable != null)
+                    {
+                        if (datatable.Rows.Count > 0)
+                        {
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            return Content(json, "application/json");
+                        }//datatable has rows
+                        else
+                        {
+                            return Content("-1");
+                        }//datatable has no rows
+                    }//datatable is not null
+
+                    return Content("0");
+
+                }//user is not equal to null.
+                //else
+                //{
+                //    return Content("0");
+                //}//user id null.
+            }//try block ends.
+            catch (Exception ex)
+            {
+                string err_msg = ex.Message;
+                return Content("0");
+
+            }//catch block ends.
+
+        }
+
+        [HttpPost]
+
+        ///<summary>
+        /// GetResolvedComplaint actionmethod fetches all resolved requests from the tables.
+        ///if database is newtrack, table used : telemetry_month.
+        ///if database is alttracking, table used : tbl_telemetry_month.
+        ///</summary>
+        public IActionResult GetResolvedComplaint(string user_id)
+        {
+            try
+            {
+                //string user_id = getallstudents.user_id;
+                string json = "";
+                //if (user_id != null)
+                {
+                    //string query = $"select name from bs_all_students where user_id = '{user_id}'";
+                    string query = @"select  p.*,s.student_name,r.route_name,u.sys_username,c.complaint,s.mobile_no1 from bs_parent_complaint p inner join bs_student_master_backup s on s.bs_user_id= p.bs_user_id inner join bs_route_students rs on 
+                         rs.student_id = s.id inner join bs_route_master r on r.id = rs.route_id inner join tbl_users u on u.id = r.sys_user_id
+                         inner join bs_complaint_master c on c.id=p.complaint_id  where p.is_active = 0 and u.id = " + user_id + "  order by p.id";
+
+                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    if (datatable != null)
+                    {
+                        if (datatable.Rows.Count > 0)
+                        {
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            return Content(json, "application/json");
+                        }//datatable has rows
+                        else
+                        {
+                            return Content("-1");
+                        }//datatable has no rows
+                    }//datatable is not null
+
+                    return Content("0");
+
+                }//user is not equal to null.
+                //else
+                //{
+                //    return Content("0");
+                //}//user id null.
+            }//try block ends.
+            catch (Exception ex)
+            {
+                string err_msg = ex.Message;
+                return Content("0");
+
+            }//catch block ends.
+
+        }
+
+
+        [HttpPost]
+
+
+        ///<summary>
+        /// UpdatedComplaint actionmethod update bs_parent_complaint tablewith is_active=0 when complaint resolved .
+        ///if database is newtrack, table used : telemetry_month.
+        ///if database is alttracking, table used : tbl_telemetry_month.
+        ///</summary>
+        public bool UpdatedComplaint(complain complain)
+        {
+            try
+            {
+                //string user_id = getallstudents.user_id;
+                string json = "";
+                if (complain.userid != 0)
+                {
+                    //string query = $"select name from bs_all_students where user_id = '{user_id}'";
+                    string query = $@"update bs_parent_complaint set is_active=0 , resolved_on=getDate(),comments='{complain.comment}' where id= {complain.Id}";
+
+                    int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                    if (rowaffected > 0)
+                    {
+                        return true;
+                    }//datatable is not null
+
+                    return false;
+
+                }
+                return false;
+            }//try block ends.
+            catch (Exception ex)
+            {
+                return false;
+
+            }//catch block ends.
+
+        }
+
+    }
+}
