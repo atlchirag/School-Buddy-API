@@ -206,7 +206,11 @@ namespace SchoolBuddy_APIs.Controllers
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else
@@ -265,7 +269,11 @@ namespace SchoolBuddy_APIs.Controllers
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else

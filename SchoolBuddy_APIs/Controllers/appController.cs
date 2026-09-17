@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using SchoolBuddy_APIs.Database_methods;
 using SchoolBuddy_APIs.Models.App;
+using SchoolBuddy_APIs.Models.Master.Holidays_And_Events;
 using SchoolBuddy_APIs.Models.Master.Route;
 using SchoolBuddy_APIs.Models.Report;
 using System.Collections.Generic;
@@ -80,7 +81,7 @@ namespace SchoolBuddy_APIs.Controllers
 
                 if (isNewtrack)
                 {
-                    database = "newtrack";    
+                    database = "newtrack";
                 }
                 else
                 {
@@ -431,7 +432,7 @@ namespace SchoolBuddy_APIs.Controllers
 
                         };
                         return Content(JsonConvert.SerializeObject(arav1), "application/json");
-                        
+
                     }
                     api_response_app_variables arav2 = new api_response_app_variables
                     {
@@ -440,7 +441,7 @@ namespace SchoolBuddy_APIs.Controllers
 
                     };
                     return Content(JsonConvert.SerializeObject(arav2), "application/json");
-                    
+
                 }
                 api_response_app_variables arav3 = new api_response_app_variables
                 {
@@ -463,7 +464,7 @@ namespace SchoolBuddy_APIs.Controllers
 
                 };
                 return Content(JsonConvert.SerializeObject(arav4), "application/json");
-               
+
 
             }//catch block ends.
         }
@@ -725,7 +726,7 @@ namespace SchoolBuddy_APIs.Controllers
                 string queryforgettingstudentdetails;
 
                 // SPECIAL CASE — DIRECT NEWTRACK
-                if (sys_userid == "5415" || sys_userid == "5456" || sys_userid == "28535" || sys_userid == "3094" || sys_userid == "5383")
+                if (sys_userid == "3094")
                 {
                     queryforgettingstudentdetails = @"
                 select bsmb.id, brs.route_id as routeid, bsmb.student_name,
@@ -748,12 +749,12 @@ namespace SchoolBuddy_APIs.Controllers
                 bcm.class_name, bsmb.admission_no, bsmb.section, bsmb.rf_id,
                 brm.route_name, brm.sys_service_id, brm.start_time_up, brm.end_time_up,
                 s.veh_reg, bd.name as driver_name, bd.mobile as driver_mobileno
-                from bs_student_master_backup bsmb
-                left join bs_class_master bcm on bsmb.class = bcm.id
-                left join bs_route_students brs on bsmb.id = brs.student_id
-                left join bs_route_master brm on brm.id = brs.route_id
+                from atltracking.dbo.bs_student_master_backup bsmb
+                left join atltracking.dbo.bs_class_master bcm on bsmb.class = bcm.id
+                left join atltracking.dbo.bs_route_students brs on bsmb.id = brs.student_id
+                left join atltracking.dbo.bs_route_master brm on brm.id = brs.route_id
                 left join atltracking.dbo.tbl_services s on brm.sys_service_id = s.id
-                left join bs_driver bd on s.id = bd.sys_service_id
+                left join atltracking.dbo.bs_driver bd on s.id = bd.sys_service_id
                 where bsmb.bs_user_id = '" + parent_id + @"' 
                    or bsmb.parent_id = '" + parent_id + "'";
                 }
@@ -1004,7 +1005,7 @@ namespace SchoolBuddy_APIs.Controllers
                         }
                         notificationlist notify = new notificationlist
                         {
-                            
+
                             msg = "success",
                             response = list,
                             status = "1"
@@ -1174,11 +1175,15 @@ namespace SchoolBuddy_APIs.Controllers
                 DataTable dt = null;
 
                 // Direct Newtrack school special case
-                if (sys_userid == "5415" || sys_userid == "5456" || sys_userid == "28535" || sys_userid == "3094")
+                if (sys_userid == "3094")
                 {
                     querytogetlivedata = $@"
                 select id, sys_proc_time as server_time, gps_time, gps_latitude,
-                gps_longitude, gps_speed, latitude_direction, longitude_direction, battery_voltage
+                gps_longitude, CASE 
+        WHEN sys_proc_time < DATEADD(MINUTE, -10, GETDATE()) 
+            THEN 0
+        ELSE gps_speed
+    END AS gps_speed, latitude_direction, longitude_direction, battery_voltage
                 from latest_telemetry 
                 where sys_service_id = '{service_id}'";
 
@@ -1189,7 +1194,11 @@ namespace SchoolBuddy_APIs.Controllers
                     // 1st TRY → ATL
                     querytogetlivedata = $@"
                 select id, sys_proc_time as server_time, gps_time, gps_latitude,
-                gps_longitude, gps_speed, latitude_direction, longitude_direction, battery_voltage
+                gps_longitude, CASE 
+        WHEN sys_proc_time < DATEADD(MINUTE, -10, GETDATE()) 
+            THEN 0
+        ELSE gps_speed
+    END AS gps_speed, latitude_direction, longitude_direction, battery_voltage
                 from atltracking.dbo.tbl_latest_telemetry 
                 where sys_service_id = '{service_id}'";
 
@@ -1200,7 +1209,11 @@ namespace SchoolBuddy_APIs.Controllers
                     {
                         querytogetlivedata = $@"
                     select id, sys_proc_time as server_time, gps_time, gps_latitude,
-                    gps_longitude, gps_speed, latitude_direction, longitude_direction, battery_voltage
+                    gps_longitude, CASE 
+        WHEN sys_proc_time < DATEADD(MINUTE, -10, GETDATE()) 
+            THEN 0
+        ELSE gps_speed
+    END AS gps_speed, latitude_direction, longitude_direction, battery_voltage
                     from newtrack.dbo.latest_telemetry 
                     where sys_service_id = '{service_id}'";
 
@@ -1384,19 +1397,19 @@ namespace SchoolBuddy_APIs.Controllers
         ///if database is newtrack, table used : telemetry_month.
         ///if database is alttracking, table used : tbl_telemetry_month.
         ///</summary>
-        public IActionResult editPassword([FromQuery] string parent_id, [FromQuery] string currentpassword, [FromQuery]string newpassword)
+        public IActionResult editPassword([FromQuery] string parent_id, [FromQuery] string currentpassword, [FromQuery] string newpassword)
         {
 
             try
             {
 
-                if (parent_id != "" && newpassword != "" && currentpassword !="")
+                if (parent_id != "" && newpassword != "" && currentpassword != "")
                 {
                     string checkuser = $"select * from bs_user_master where id = {parent_id}";
                     DataTable data = _sql_qury_execution.DML_Select(checkuser);
-                    if (data!=null)
+                    if (data != null)
                     {
-                        if (data.Rows.Count>0)
+                        if (data.Rows.Count > 0)
                         {
                             string query = $"update bs_user_master set bs_password = '{newpassword}' where id = {parent_id} and bs_password = '{currentpassword}'";
                             int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query);
@@ -1441,7 +1454,7 @@ namespace SchoolBuddy_APIs.Controllers
                         return Content(JsonConvert.SerializeObject(arav4), "application/json");
                     }
 
-                    
+
 
                 }
                 api_response_app_variables arav3 = new api_response_app_variables
@@ -1493,7 +1506,7 @@ namespace SchoolBuddy_APIs.Controllers
                             string stop_status = "none";
                             switch (Convert.ToInt32(row["status"].ToString()))
                             {
-                                
+
                                 case 1:
                                     stop_status = "upcoming";
                                     break;
@@ -1519,7 +1532,7 @@ namespace SchoolBuddy_APIs.Controllers
                                 stop_order = row["stop_order"].ToString(),
                                 visited_upcoming = stop_status
                             };
-                            
+
                             list.Add(stop);
                         }
                         stops stoplist = new stops
@@ -1535,7 +1548,7 @@ namespace SchoolBuddy_APIs.Controllers
                         //string json = JsonConvert.SerializeObject(dt, Formatting.Indented);
                         //return Content(json);
                     }
-                   
+
                     stops stoplist1 = new stops
                     {
 
@@ -1597,7 +1610,7 @@ namespace SchoolBuddy_APIs.Controllers
                     {
                         if (dt.Rows.Count > 0)
                         {
-                            if(gen.generalsendemail("ticket@atlantasys.in", "tanyasuyalatl@gmail.com", message, dt.Rows[0]["contact_no"].ToString()))
+                            if (gen.generalsendemail("ticket@atlantasys.in", "tanyasuyalatl@gmail.com", message, dt.Rows[0]["contact_no"].ToString()))
                             {
                                 api_response_app_variables arav_otp2 = new api_response_app_variables
                                 {
@@ -1608,7 +1621,7 @@ namespace SchoolBuddy_APIs.Controllers
                                 return Content(JsonConvert.SerializeObject(arav_otp2), "application/json");
                             }
 
-                            
+
                         }
                         else
                         {
@@ -1675,7 +1688,7 @@ namespace SchoolBuddy_APIs.Controllers
                                 from_date = row["from_date"].ToString(),
                                 to_date = row["to_date"].ToString(),
                                 description = row["description"].ToString()
-                                
+
                             };
                             list.Add(holiday);
                         }
@@ -2028,9 +2041,6 @@ namespace SchoolBuddy_APIs.Controllers
         }
 
 
-
-
-
         [HttpGet]
         public IActionResult GetHolidays([FromQuery] string schoolid)
         {
@@ -2191,9 +2201,6 @@ ORDER BY bs.student_name;
                 return StatusCode(500, new { message = "Internal Server Error", error = e.Message });
             }
         }
-
-
-
 
 
     }

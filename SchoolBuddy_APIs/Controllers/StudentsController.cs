@@ -59,7 +59,11 @@ namespace SchoolBuddy_APIs.Controllers
                     {
                         if (datatable.Rows.Count >= 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else
@@ -1276,6 +1280,109 @@ namespace SchoolBuddy_APIs.Controllers
                                                                        (route_id, stop_id, student_id)
                                                                        VALUES ({assign_Student.route_id}, {assign_Student.stopid}, {row["Id"]})";
 
+                            //check is route alerady assigned 
+                            // Get requested route name
+                            string requestedRouteQuery = $@"
+    SELECT route_name
+    FROM bs_route_master
+    WHERE id = {assign_Student.route_id}";
+
+                            DataTable requestedRoute =
+                                _sql_qury_execution.DML_Select(requestedRouteQuery);
+
+                            if (requestedRoute == null || requestedRoute.Rows.Count == 0)
+                            {
+                                return Content("Invalid route.");
+                            }
+
+                            string requestedRouteName =
+                                requestedRoute.Rows[0]["route_name"]?.ToString()?.Trim() ?? "";
+
+                            bool requestedIsPick =
+                                requestedRouteName.Contains(
+                                    "pick",
+                                    StringComparison.OrdinalIgnoreCase);
+
+                            bool requestedIsDrop =
+                                requestedRouteName.Contains(
+                                    "drop",
+                                    StringComparison.OrdinalIgnoreCase);
+
+
+                            // Get student's existing route + stop assignments
+                            string isAlreadyQuery = $@"
+    SELECT 
+        r.route_id,
+        r.stop_id,
+        m.route_name,
+        s.user_stop_name
+    FROM bs_route_students r
+    INNER JOIN bs_route_master m 
+        ON m.id = r.route_id
+    INNER JOIN bs_stop_master s 
+        ON s.id = r.stop_id
+    WHERE r.student_id = {row["Id"]}";
+
+                            DataTable isAlready =
+                                _sql_qury_execution.DML_Select(isAlreadyQuery);
+
+
+                            if (isAlready != null && isAlready.Rows.Count > 0)
+                            {
+                                foreach (DataRow existingRow in isAlready.Rows)
+                                {
+                                    int existingRouteId =
+                                        Convert.ToInt32(existingRow["route_id"]);
+
+                                    int existingStopId =
+                                        Convert.ToInt32(existingRow["stop_id"]);
+
+                                    string existingRouteName =
+                                        existingRow["route_name"]?.ToString()?.Trim() ?? "";
+
+                                    string existingStopName =
+                                        existingRow["user_stop_name"]?.ToString()?.Trim() ?? "";
+
+
+                                    //assigning on the same route and stop
+                                    if (existingRouteId == Convert.ToInt32(assign_Student.route_id) &&
+                                        existingStopId == Convert.ToInt32(assign_Student.stopid))
+                                    {
+                                        return Content(
+                                            $"Student is already assigned to route '{existingRouteName}' " +
+                                            $"at stop '{existingStopName}'.");
+                                    }
+
+                                   //check route type
+                                    bool existingIsPick =
+                                        existingRouteName.Contains(
+                                            "pick",
+                                            StringComparison.OrdinalIgnoreCase);
+
+                                    bool existingIsDrop =
+                                        existingRouteName.Contains(
+                                            "drop",
+                                            StringComparison.OrdinalIgnoreCase);
+
+
+                                    //pick alerady exist
+                                    if (requestedIsPick && existingIsPick)
+                                    {
+                                        return Content(
+                                            $"Student is already assigned to Pick route '{existingRouteName}' " +
+                                            $"at stop '{existingStopName}'.");
+                                    }
+
+                                    //drop alerady exist
+                                    if (requestedIsDrop && existingIsDrop)
+                                    {
+                                        return Content(
+                                            $"Student is already assigned to Drop route '{existingRouteName}' " +
+                                            $"at stop '{existingStopName}'.");
+                                    }
+                                }
+                            }
+
                             string query_to_check_stop = $"SELECT id FROM bs_stop_master WHERE id = {assign_Student.stopid}";
                             DataTable stops = _sql_qury_execution.DML_Select(query_to_check_stop);
 
@@ -1296,7 +1403,7 @@ namespace SchoolBuddy_APIs.Controllers
                                     {
                                         string query_for_insert_in_bs_user_master = $@"INSERT INTO bs_user_master
                                                                                (sys_user_id, bs_user_name, bs_password)
-                                                                               VALUES ({assign_Student.schoolid}, '{row["mobile_1"]}', 12345)";
+                                                                               VALUES ({assign_Student.schoolid}, '{row["mobile_no1"]}', 12345)";
 
                                         int rowaffected = query_for_update_RFID != null
                                             ? _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction(query_for_update_RFID, query_for_insert_in_bs_route_students, query_for_insert_in_bs_user_master)
@@ -1580,7 +1687,11 @@ ORDER BY
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else

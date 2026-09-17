@@ -43,7 +43,11 @@ namespace SchoolBuddy_APIs.Controllers
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else
@@ -113,7 +117,11 @@ namespace SchoolBuddy_APIs.Controllers
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else
@@ -136,7 +144,11 @@ namespace SchoolBuddy_APIs.Controllers
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else
@@ -234,13 +246,22 @@ namespace SchoolBuddy_APIs.Controllers
             FROM bs_route_master
             WHERE sys_user_id = '{route.user_id}'
               AND LTRIM(RTRIM(LOWER(route_name))) = LTRIM(RTRIM(LOWER('{route.route_name}')))";
+                string checkTimeQuery = $@"
+SELECT COUNT(1) as route
+FROM bs_route_master
+WHERE sys_service_id = '{route.service_id}'
+  AND start_time_up < '{route.end_time_up}'
+  AND end_time_up > '{route.start_time_up}'";
 
                 DataTable checkDt = _sql_qury_execution.DML_Select(checkDuplicateQuery);
+                DataTable checkTime = _sql_qury_execution.DML_Select(checkTimeQuery);
 
-                if (checkDt != null && checkDt.Rows.Count > 0)
+                if (checkDt != null && checkDt.Rows.Count > 0 || checkTime != null && checkTime.Rows.Count > 0)
                 {
                     int total = Convert.ToInt32(checkDt.Rows[0]["total"]);
-                    if (total > 0)
+                    int cRoute = Convert.ToInt32(checkTime.Rows[0]["route"]);
+
+                    if (total > 0||cRoute>0)
                     {
                         return false;
                     }

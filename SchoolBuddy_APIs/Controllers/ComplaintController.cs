@@ -117,7 +117,11 @@ namespace SchoolBuddy_APIs.Controllers
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else
@@ -141,6 +145,421 @@ namespace SchoolBuddy_APIs.Controllers
 
             }//catch block ends.
 
+        }
+
+
+
+
+        [HttpPost]
+
+        public IActionResult ComplaintPage(string user_id)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(user_id))
+                {
+                    return Content("0");
+                }
+
+
+                string query = @"
+            SELECT
+                p.id AS complaint_id,
+
+                -- Parent
+                s.father_name AS parent_name,
+                s.mobile_no1 AS mobile_no,
+
+                -- Complaint
+                c.complaint,
+                p.description,
+                p.raised_on,
+                p.is_active,
+
+                -- Student
+                s.id AS student_id,
+                s.student_name,
+
+                -- Pick Route
+                MAX(
+                    CASE
+                        WHEN UPPER(r.route_name) LIKE '%PICK%'
+                        THEN r.route_name
+                    END
+                ) AS pick_route,
+
+                -- Drop Route
+                MAX(
+                    CASE
+                        WHEN UPPER(r.route_name) LIKE '%DROP%'
+                        THEN r.route_name
+                    END
+                ) AS drop_route
+
+            FROM bs_parent_complaint p
+
+            INNER JOIN bs_student_master_backup s
+                ON s.bs_user_id = p.bs_user_id
+
+            INNER JOIN bs_route_students rs
+                ON rs.student_id = s.id
+
+            INNER JOIN bs_route_master r
+                ON r.id = rs.route_id
+
+            INNER JOIN tbl_users u
+                ON u.id = r.sys_user_id
+
+            INNER JOIN bs_complaint_master c
+                ON c.id = p.complaint_id
+
+            WHERE
+                p.is_active = 1
+                AND u.id = " + user_id + @"
+
+            GROUP BY
+                p.id,
+                s.father_name,
+                s.mobile_no1,
+                c.complaint,
+                p.description,
+                p.raised_on,
+                p.is_active,
+                s.id,
+                s.student_name
+
+            ORDER BY
+                p.id DESC,
+                s.id;
+        ";
+
+                DataTable datatable =
+                    _sql_qury_execution.DML_Select(query);
+
+
+                // =========================================================
+                // 2. GET SUMMARY COUNTS
+                // =========================================================
+
+                string summaryQuery = @"
+            SELECT
+
+                -- Total unique complaints
+                COUNT(DISTINCT p.id) AS totalComplaints,
+
+                -- Pending unique complaints
+                COUNT(
+                    DISTINCT CASE
+                        WHEN p.is_active = 1
+                        THEN p.id
+                    END
+                ) AS pendingComplaints,
+
+                -- Resolved unique complaints
+                COUNT(
+                    DISTINCT CASE
+                        WHEN p.is_active = 0
+                        THEN p.id
+                    END
+                ) AS resolvedComplaints,
+
+                -- Unique students having complaints
+                COUNT(DISTINCT s.id) AS students
+
+            FROM bs_parent_complaint p
+
+            INNER JOIN bs_student_master_backup s
+                ON s.bs_user_id = p.bs_user_id
+
+            INNER JOIN bs_route_students rs
+                ON rs.student_id = s.id
+
+            INNER JOIN bs_route_master r
+                ON r.id = rs.route_id
+
+            INNER JOIN tbl_users u
+                ON u.id = r.sys_user_id
+
+            WHERE
+                u.id = " + user_id + @";
+        ";
+
+                DataTable summaryTable =
+                    _sql_qury_execution.DML_Select(summaryQuery);
+
+
+                // =========================================================
+                // 3. READ SUMMARY
+                // =========================================================
+
+                int totalComplaints = 0;
+                int pendingComplaints = 0;
+                int resolvedComplaints = 0;
+                int students = 0;
+
+                if (summaryTable != null && summaryTable.Rows.Count > 0)
+                {
+                    DataRow row = summaryTable.Rows[0];
+
+                    totalComplaints =
+                        Convert.ToInt32(row["totalComplaints"]);
+
+                    pendingComplaints =
+                        Convert.ToInt32(row["pendingComplaints"]);
+
+                    resolvedComplaints =
+                        Convert.ToInt32(row["resolvedComplaints"]);
+
+                    students =
+                        Convert.ToInt32(row["students"]);
+                }
+
+
+                // =========================================================
+                // 4. PREPARE RESPONSE
+                // =========================================================
+
+                var result = new
+                {
+                    summary = new
+                    {
+                        totalComplaints = totalComplaints,
+                        pendingComplaints = pendingComplaints,
+                        resolvedComplaints = resolvedComplaints,
+                        students = students
+                    },
+
+                    data = datatable
+                };
+
+
+                // =========================================================
+                // 5. RETURN JSON
+                // =========================================================
+
+                return Content(
+                    JsonConvert.SerializeObject(
+                        result,
+                        Formatting.Indented
+                    ),
+                    "application/json"
+                );
+            }
+            catch (Exception ex)
+            {
+                string err_msg = ex.Message;
+
+                return Content("0");
+            }
+        }
+
+
+        [HttpPost]
+
+        public IActionResult ResolvedComplaintPage(string user_id)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(user_id))
+                {
+                    return Content("0");
+                }
+
+
+                string query = @"
+    SELECT
+        p.id AS complaint_id,
+
+        -- Parent
+        s.father_name AS parent_name,
+
+        -- Complaint
+        c.complaint,
+        p.description,
+        p.raised_on,
+
+        -- Resolution
+        p.comments,
+        p.resolved_on,
+
+        p.is_active,
+
+        -- Student
+        s.id AS student_id,
+        s.student_name,
+
+        -- Pick Route
+        MAX(
+            CASE
+                WHEN UPPER(r.route_name) LIKE '%PICK%'
+                THEN r.route_name
+            END
+        ) AS pick_route,
+
+        -- Drop Route
+        MAX(
+            CASE
+                WHEN UPPER(r.route_name) LIKE '%DROP%'
+                THEN r.route_name
+            END
+        ) AS drop_route
+
+    FROM bs_parent_complaint p
+
+    INNER JOIN bs_student_master_backup s
+        ON s.bs_user_id = p.bs_user_id
+
+    INNER JOIN bs_route_students rs
+        ON rs.student_id = s.id
+
+    INNER JOIN bs_route_master r
+        ON r.id = rs.route_id
+
+    INNER JOIN tbl_users u
+        ON u.id = r.sys_user_id
+
+    INNER JOIN bs_complaint_master c
+        ON c.id = p.complaint_id
+
+    WHERE
+        p.is_active = 0
+        AND u.id = " + user_id + @"
+
+    GROUP BY
+        p.id,
+        s.father_name,
+        c.complaint,
+        p.description,
+        p.raised_on,
+        p.comments,
+        p.resolved_on,
+        p.is_active,
+        s.id,
+        s.student_name
+
+    ORDER BY
+        p.id DESC,
+        s.id;
+";
+
+                DataTable datatable =
+                    _sql_qury_execution.DML_Select(query);
+
+
+                // =========================================================
+                // 2. GET SUMMARY COUNTS
+                // =========================================================
+
+                string summaryQuery = @"
+            SELECT
+
+                -- Total unique complaints
+                COUNT(DISTINCT p.id) AS totalComplaints,
+
+                -- Pending unique complaints
+                COUNT(
+                    DISTINCT CASE
+                        WHEN p.is_active = 1
+                        THEN p.id
+                    END
+                ) AS pendingComplaints,
+
+                -- Resolved unique complaints
+                COUNT(
+                    DISTINCT CASE
+                        WHEN p.is_active = 0
+                        THEN p.id
+                    END
+                ) AS resolvedComplaints,
+
+                -- Unique students having complaints
+                COUNT(DISTINCT s.id) AS students
+
+            FROM bs_parent_complaint p
+
+            INNER JOIN bs_student_master_backup s
+                ON s.bs_user_id = p.bs_user_id
+
+            INNER JOIN bs_route_students rs
+                ON rs.student_id = s.id
+
+            INNER JOIN bs_route_master r
+                ON r.id = rs.route_id
+
+            INNER JOIN tbl_users u
+                ON u.id = r.sys_user_id
+
+            WHERE
+                u.id = " + user_id + @";
+        ";
+
+                DataTable summaryTable =
+                    _sql_qury_execution.DML_Select(summaryQuery);
+
+
+                // =========================================================
+                // 3. READ SUMMARY
+                // =========================================================
+
+                int totalComplaints = 0;
+                int pendingComplaints = 0;
+                int resolvedComplaints = 0;
+                int students = 0;
+
+                if (summaryTable != null && summaryTable.Rows.Count > 0)
+                {
+                    DataRow row = summaryTable.Rows[0];
+
+                    totalComplaints =
+                        Convert.ToInt32(row["totalComplaints"]);
+
+                    pendingComplaints =
+                        Convert.ToInt32(row["pendingComplaints"]);
+
+                    resolvedComplaints =
+                        Convert.ToInt32(row["resolvedComplaints"]);
+
+                    students =
+                        Convert.ToInt32(row["students"]);
+                }
+
+
+                // =========================================================
+                // 4. PREPARE RESPONSE
+                // =========================================================
+
+                var result = new
+                {
+                    summary = new
+                    {
+                        totalComplaints = totalComplaints,
+                        pendingComplaints = pendingComplaints,
+                        resolvedComplaints = resolvedComplaints,
+                        students = students
+                    },
+
+                    data = datatable
+                };
+
+
+                // =========================================================
+                // 5. RETURN JSON
+                // =========================================================
+
+                return Content(
+                    JsonConvert.SerializeObject(
+                        result,
+                        Formatting.Indented
+                    ),
+                    "application/json"
+                );
+            }
+            catch (Exception ex)
+            {
+                string err_msg = ex.Message;
+
+                return Content("0");
+            }
         }
 
         [HttpPost]
@@ -168,7 +587,11 @@ namespace SchoolBuddy_APIs.Controllers
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else

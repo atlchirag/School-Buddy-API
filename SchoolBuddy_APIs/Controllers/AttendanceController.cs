@@ -180,8 +180,11 @@ ORDER BY
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
-                            return Content(json, "application/json");
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings); return Content(json, "application/json");
                         }//datatable has rows
                         else
                         {
@@ -390,7 +393,11 @@ ORDER BY
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else

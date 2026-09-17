@@ -63,7 +63,7 @@ namespace SchoolBuddy_APIs.Controllers
                         {
                             query.Append($"SELECT student.student_name,student.admission_no,brm.route_name, ");
                             query.Append($"brm.id ,bum.bs_user_name as mobile_no,noti.message ,'Sent' AS status");
-                            query.Append($"FROM bs_notification_parent noti left join bs_user_master bum ");
+                            query.Append($" FROM bs_notification_parent noti left join bs_user_master bum ");
                             query.Append($"on noti.parent_id = bum.id left join bs_route_master brm ");
                             query.Append($"on noti.Route_id = brm.id left  join bs_student_master_backup student ");
                             query.Append($"on bum.id = student.bs_user_id left join users u ");
@@ -74,12 +74,12 @@ namespace SchoolBuddy_APIs.Controllers
                         else
                         {
                             query.Append($"SELECT student.student_name,student.admission_no,brm.route_name, ");
-                            query.Append($"brm.id ,bum.bs_user_name as mobile_no,noti.message ,'Sent' AS status");
+                            query.Append($"brm.id ,bum.bs_user_name as mobile_no,noti.message ,'Sent' AS status ");
                             query.Append($"FROM bs_notification_parent noti left join bs_user_master bum ");
                             query.Append($"on noti.parent_id = bum.id left join bs_route_master brm ");
                             query.Append($"on noti.Route_id = brm.id left  join bs_student_master_backup student ");
                             query.Append($"on bum.id = student.bs_user_id left join [atltracking].[dbo].tbl_users u ");
-                            query.Append($"on student.sys_user_id = u.id where cast(noti.date_time as Date) = '{date}' ");
+                            query.Append($"on student.sys_user_id = u.id where cast(noti.date_time as Date) = '{date}'  ");
                             query.Append($"and u.Id ='{user_id}' order by student.student_name;");
                             //query.Append($"SELECT student.student_name,student.admission_no,brm.route_name, brm.id ,bum.bs_user_name as mobile_no,noti.message ,'Sent' AS status from bs_notification_parent noti inner join bs_user_master bum on noti.parent_id = bum.id inner join bs_route_master brm on noti.Route_id = brm.id inner join bs_student_master_backup student on noti.student_id = student.id inner join atltracking.[dbo].tbl_users u on student.sys_user_id = u.id where cast(noti.date_time as Date) ='{date}' and u.Id ='{user_id}' order by student.student_name;");
                         }
@@ -108,7 +108,7 @@ namespace SchoolBuddy_APIs.Controllers
                             //query.Append($"on bum.id = student.bs_user_id left join atltracking.[dbo].tbl_users u ");
                             //query.Append($"on student.sys_user_id = u.id where cast(noti.date_time as Date) = '{date}' ");
                             //query.Append($"and u.Id ='{user_id}' order by student.student_name;");
-                            query.Append($"SELECT student.student_name,student.admission_no,brm.route_name, brm.id ,bum.bs_user_name as mobile_no,noti.message ,'Sent' AS status from bs_notification_parent noti inner join bs_user_master bum on noti.parent_id = bum.id inner join bs_route_master brm on noti.Route_id = brm.id inner join bs_student_master_backup student on noti.student_id = student.id inner join atltracking.[dbo].tbl_users u on student.sys_user_id = u.id where cast(noti.date_time as Date) ='{date}' and u.Id ='{user_id}' order by student.student_name;");
+                            query.Append($"SELECT student.student_name,student.admission_no,brm.route_name, brm.id ,bum.bs_user_name as mobile_no,noti.message ,'Sent' AS status from bs_notification_parent noti left join bs_user_master bum on noti.parent_id = bum.id left join bs_route_master brm on noti.Route_id = brm.id left join bs_student_master_backup student on noti.student_id = student.id inner join atltracking.[dbo].tbl_users u on student.sys_user_id = u.id where cast(noti.date_time as Date) ='{date}' and u.Id ='{user_id}' order by student.student_name;");
                         }
                     }
                 
@@ -119,7 +119,11 @@ namespace SchoolBuddy_APIs.Controllers
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else
@@ -178,7 +182,11 @@ namespace SchoolBuddy_APIs.Controllers
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else
@@ -233,7 +241,11 @@ namespace SchoolBuddy_APIs.Controllers
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else
@@ -309,7 +321,11 @@ namespace SchoolBuddy_APIs.Controllers
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+{
+    DateFormatString = "yyyy-MM-dd HH:mm:ss"
+};
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented,settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else
@@ -862,7 +878,11 @@ OPTION(RECOMPILE);
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else
@@ -1046,7 +1066,11 @@ OPTION(RECOMPILE);
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else
@@ -1180,7 +1204,11 @@ ORDER BY punch_gps_time ASC;
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else

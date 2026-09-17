@@ -11,6 +11,7 @@ using SchoolBuddy_APIs.Models.Master.Students;
 using System.Data;
 using System.Data.SqlClient;
 using System.Drawing.Printing;
+using System.Globalization;
 using static SchoolBuddy_APIs.Models.Driver.Driver;
 
 namespace SchoolBuddy_APIs.Controllers
@@ -458,7 +459,7 @@ WHERE bsmb.sys_user_id = {getallstudents.user_id}";
                                         services 
                                         on services.id = lt.sys_service_id
                                         where services.sys_user_id = {user_id}
-                                        and lt.gps_speed >0";
+                                        and lt.gps_speed >0 and CAST(lt.sys_proc_time AS DATE) = CAST(GETDATE() AS DATE);";
                     }
                     else if (database == "atltracking")
                     {
@@ -468,7 +469,7 @@ WHERE bsmb.sys_user_id = {getallstudents.user_id}";
                                          atltracking.dbo.tbl_services s
                                          on s.id = lt.sys_service_id
                                          where s.sys_user_id = {user_id}
-                                         and lt.gps_speed >0";
+                                         and lt.gps_speed >0 and CAST(lt.sys_proc_time AS DATE) = CAST(GETDATE() AS DATE);";
                     }
                     else
                     {
@@ -546,7 +547,11 @@ FETCH NEXT {pageSize} ROWS ONLY";
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else
@@ -632,7 +637,11 @@ FETCH NEXT {pageSize} ROWS ONLY";
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else
@@ -930,7 +939,7 @@ ORDER BY s.veh_reg;";
 										devices d
 										on services.sys_device_id = d.id
                                         where services.sys_user_id = {user_id}
-                                        and lt.gps_speed >0";
+                                        and lt.gps_speed >0  AND CAST(lt.sys_proc_time AS DATE) = CAST(GETDATE() AS DATE);";
                     }
                     else if (database == "atltracking")
                     {
@@ -945,7 +954,8 @@ ORDER BY s.veh_reg;";
 										atltracking.dbo.tbl_devices d
 										on s.sys_device_id = d.id
                                         where s.sys_user_id = {user_id}
-                                        and lt.gps_speed >0";
+                                        and lt.gps_speed >0 and
+                                         CAST(lt.sys_proc_time AS DATE) = CAST(GETDATE() AS DATE);";
                     }
                     else
                     {
@@ -957,7 +967,11 @@ ORDER BY s.veh_reg;";
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else
@@ -1170,7 +1184,11 @@ ORDER BY s.veh_reg;";
                     {
                         if (datatable.Rows.Count > 0)
                         {
-                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
+                            var settings = new JsonSerializerSettings
+                            {
+                                DateFormatString = "yyyy-MM-dd HH:mm:ss"
+                            };
+                            json = JsonConvert.SerializeObject(datatable, Formatting.Indented, settings);
                             return Content(json, "application/json");
                         }//datatable has rows
                         else
@@ -1511,6 +1529,7 @@ DECLARE @UserId INT = {userId};
 DECLARE @FromDateTime DATETIME = '{from}';
 DECLARE @ToDateTime DATETIME = '{to}';
 
+
 ;WITH RouteCandidates AS
 (
     SELECT
@@ -1542,32 +1561,53 @@ DECLARE @ToDateTime DATETIME = '{to}';
             ELSE 'Unknown'
         END AS movement_type,
 
+        /* 
+           Route matching time:
+           punch_gps_time + 330 minutes
+        */
         CASE
-            WHEN TRY_CONVERT(TIME, rf.sys_proc_time)
+            WHEN TRY_CONVERT(
+                    TIME,
+                    DATEADD(MINUTE, 330, rf.punch_gps_time)
+                 )
                  BETWEEN TRY_CONVERT(TIME, rm.start_time_up)
                      AND TRY_CONVERT(TIME, rm.end_time_up)
                 THEN 0
             ELSE 1
         END AS outside_time_range,
 
+        /*
+           Calculate difference between:
+           punch_gps_time + 330 minutes
+           and route start/end time
+        */
         CASE
             WHEN TRY_CONVERT(TIME, rm.start_time_up) IS NULL
               OR TRY_CONVERT(TIME, rm.end_time_up) IS NULL
                 THEN 999999
 
-            WHEN TRY_CONVERT(TIME, rf.sys_proc_time)
+            WHEN TRY_CONVERT(
+                    TIME,
+                    DATEADD(MINUTE, 330, rf.punch_gps_time)
+                 )
                  BETWEEN TRY_CONVERT(TIME, rm.start_time_up)
                      AND TRY_CONVERT(TIME, rm.end_time_up)
                 THEN 0
 
-            WHEN TRY_CONVERT(TIME, rf.sys_proc_time)
+            WHEN TRY_CONVERT(
+                    TIME,
+                    DATEADD(MINUTE, 330, rf.punch_gps_time)
+                 )
                  < TRY_CONVERT(TIME, rm.start_time_up)
                 THEN ABS
                 (
                     DATEDIFF
                     (
                         MINUTE,
-                        TRY_CONVERT(TIME, rf.sys_proc_time),
+                        TRY_CONVERT(
+                            TIME,
+                            DATEADD(MINUTE, 330, rf.punch_gps_time)
+                        ),
                         TRY_CONVERT(TIME, rm.start_time_up)
                     )
                 )
@@ -1578,14 +1618,17 @@ DECLARE @ToDateTime DATETIME = '{to}';
                 (
                     MINUTE,
                     TRY_CONVERT(TIME, rm.end_time_up),
-                    TRY_CONVERT(TIME, rf.sys_proc_time)
+                    TRY_CONVERT(
+                        TIME,
+                        DATEADD(MINUTE, 330, rf.punch_gps_time)
+                    )
                 )
             )
         END AS route_time_difference
 
     FROM rf_punch_history rf
 
-    INNER JOIN {servicesTable} s
+    INNER JOIN atltracking.dbo.tbl_services s
         ON s.id = rf.sys_service_id
        AND s.sys_user_id = @UserId
 
@@ -1607,8 +1650,11 @@ DECLARE @ToDateTime DATETIME = '{to}';
     LEFT JOIN bs_stop_master st
         ON st.id = rs.stop_id
 
-    WHERE rf.sys_proc_time >= @FromDateTime
-      AND rf.sys_proc_time < @ToDateTime
+    /*
+       Date filtering is based on original GPS time
+    */
+    WHERE rf.punch_gps_time >= @FromDateTime
+      AND rf.punch_gps_time < @ToDateTime
 ),
 
 BestRoute AS
@@ -1621,15 +1667,18 @@ BestRoute AS
             PARTITION BY
                 rfid,
                 sys_service_id,
-                sys_proc_time
+                punch_gps_time
 
             ORDER BY
                 outside_time_range ASC,
                 route_time_difference ASC,
+
                 CASE
-                    WHEN rs_student_assigned IS NOT NULL THEN 0
+                    WHEN rs_student_assigned IS NOT NULL
+                        THEN 0
                     ELSE 1
                 END,
+
                 route_id ASC
         ) AS route_rn
 
@@ -1637,10 +1686,13 @@ BestRoute AS
     (
         SELECT
             *,
+
             CASE
-                WHEN stop_id IS NOT NULL THEN 1
+                WHEN stop_id IS NOT NULL
+                    THEN 1
                 ELSE NULL
             END AS rs_student_assigned
+
         FROM RouteCandidates
     ) x
 ),
@@ -1659,7 +1711,7 @@ OneRecordPerRFIDMovement AS
             ORDER BY
                 outside_time_range ASC,
                 route_time_difference ASC,
-                sys_proc_time ASC,
+                punch_gps_time ASC,
                 route_id ASC
         ) AS movement_rn
 
@@ -1686,10 +1738,24 @@ SELECT
         'Stop Not Available'
     ) AS user_stop_name,
 
-    ISNULL(veh_reg, '') AS veh_reg,
+    ISNULL(
+        veh_reg,
+        ''
+    ) AS veh_reg,
 
     sys_proc_time,
     punch_gps_time,
+
+    /*
+       This shows the actual time being used
+       for route matching.
+    */
+    DATEADD(
+        MINUTE,
+        330,
+        punch_gps_time
+    ) AS route_matching_time,
+
     movement_type,
 
     CASE
@@ -1931,6 +1997,9 @@ DECLARE @CurrentTime TIME = CAST(GETDATE() AS TIME);
             0
         ) AS Students,
 
+        /* =========================
+           START TIME
+           ========================= */
         CONVERT(
             VARCHAR(5),
             TRY_CONVERT(
@@ -1940,6 +2009,9 @@ DECLARE @CurrentTime TIME = CAST(GETDATE() AS TIME);
             108
         ) AS StartTime,
 
+        /* =========================
+           END TIME
+           ========================= */
         CONVERT(
             VARCHAR(5),
             TRY_CONVERT(
@@ -1949,30 +2021,77 @@ DECLARE @CurrentTime TIME = CAST(GETDATE() AS TIME);
             108
         ) AS EndTime,
 
-        ISNULL(
-            NearestStop.user_stop_name,
-            'N/A'
-        ) AS StopName,
-
+        /* =========================
+           STOP NAME
+           ========================= */
         CASE
-            WHEN @CurrentTime >
+
+            -- Route not started
+            WHEN TRY_CONVERT(
+                    TIME,
+                    brm.start_time_up
+                 ) IS NOT NULL
+             AND @CurrentTime <
+                 TRY_CONVERT(
+                    TIME,
+                    brm.start_time_up
+                 )
+            THEN 'N/A'
+
+            -- Route completed
+            WHEN TRY_CONVERT(
+                    TIME,
+                    brm.end_time_up
+                 ) IS NOT NULL
+             AND @CurrentTime >
+                 TRY_CONVERT(
+                    TIME,
+                    brm.end_time_up
+                 )
+            THEN 'N/A'
+
+            -- Next stop
+            ELSE ISNULL(
+                NearestStop.user_stop_name,
+                'N/A'
+            )
+
+        END AS StopName,
+
+        /* =========================
+           ETA
+           ========================= */
+        CASE
+
+            -- Route not started
+            WHEN TRY_CONVERT(
+                    TIME,
+                    brm.start_time_up
+                 ) IS NOT NULL
+             AND @CurrentTime <
+                 TRY_CONVERT(
+                    TIME,
+                    brm.start_time_up
+                 )
+            THEN 'N/A'
+
+            -- Route completed
+            WHEN TRY_CONVERT(
+                    TIME,
+                    brm.end_time_up
+                 ) IS NOT NULL
+             AND @CurrentTime >
                  TRY_CONVERT(
                     TIME,
                     brm.end_time_up
                  )
             THEN '0'
 
+            -- No future ETA
             WHEN NearestStop.eta IS NULL
-              OR TRY_CONVERT(
-                    TIME,
-                    NearestStop.eta
-                 ) IS NULL
-              OR TRY_CONVERT(
-                    TIME,
-                    NearestStop.eta
-                 ) = '00:00:00'
             THEN 'N/A'
 
+            -- Valid ETA
             ELSE CONVERT(
                 VARCHAR(5),
                 TRY_CONVERT(
@@ -1981,38 +2100,60 @@ DECLARE @CurrentTime TIME = CAST(GETDATE() AS TIME);
                 ),
                 108
             )
+
         END AS ETA,
 
+        /* =========================
+           ETA DIFFERENCE
+           ========================= */
         CASE
-            WHEN @CurrentTime >
+
+            -- Route not started
+            WHEN TRY_CONVERT(
+                    TIME,
+                    brm.start_time_up
+                 ) IS NOT NULL
+             AND @CurrentTime <
+                 TRY_CONVERT(
+                    TIME,
+                    brm.start_time_up
+                 )
+            THEN NULL
+
+            -- Route completed
+            WHEN TRY_CONVERT(
+                    TIME,
+                    brm.end_time_up
+                 ) IS NOT NULL
+             AND @CurrentTime >
                  TRY_CONVERT(
                     TIME,
                     brm.end_time_up
                  )
             THEN 0
 
+            -- No future ETA
             WHEN NearestStop.eta IS NULL
-              OR TRY_CONVERT(
-                    TIME,
-                    NearestStop.eta
-                 ) IS NULL
-              OR TRY_CONVERT(
-                    TIME,
-                    NearestStop.eta
-                 ) = '00:00:00'
             THEN NULL
 
+            -- Minutes until ETA
             ELSE DATEDIFF(
                 MINUTE,
+                @CurrentTime,
                 TRY_CONVERT(
                     TIME,
                     NearestStop.eta
-                ),
-                @CurrentTime
+                )
             )
+
         END AS EtaDifferenceMinutes,
 
+        /* =========================
+           ROUTE STATUS
+           ========================= */
         CASE
+
+            -- Schedule unavailable
             WHEN TRY_CONVERT(
                     TIME,
                     brm.start_time_up
@@ -2023,6 +2164,7 @@ DECLARE @CurrentTime TIME = CAST(GETDATE() AS TIME);
                  ) IS NULL
             THEN 'Schedule Not Available'
 
+            -- Route not started
             WHEN @CurrentTime <
                  TRY_CONVERT(
                     TIME,
@@ -2030,6 +2172,7 @@ DECLARE @CurrentTime TIME = CAST(GETDATE() AS TIME);
                  )
             THEN 'Not Started'
 
+            -- Route completed
             WHEN @CurrentTime >
                  TRY_CONVERT(
                     TIME,
@@ -2037,19 +2180,29 @@ DECLARE @CurrentTime TIME = CAST(GETDATE() AS TIME);
                  )
             THEN 'Route Time Completed'
 
-           
-
-            WHEN @CurrentTime >
+            -- Route delayed
+            WHEN NearestStop.eta IS NOT NULL
+             AND TRY_CONVERT(
+                    TIME,
+                    NearestStop.eta
+                 ) IS NOT NULL
+             AND @CurrentTime >
                  TRY_CONVERT(
                     TIME,
                     NearestStop.eta
                  )
             THEN 'Delayed'
 
+            -- Route running normally
             ELSE 'On Time'
+
         END AS RouteStatus,
 
+        /* =========================
+           VEHICLE LIVE STATUS
+           ========================= */
         CASE
+
             WHEN LatestTelemetry.gps_time IS NULL
             THEN 'Offline'
 
@@ -2087,75 +2240,118 @@ DECLARE @CurrentTime TIME = CAST(GETDATE() AS TIME);
             THEN 'Stopped'
 
             ELSE 'Unknown'
+
         END AS VehicleLiveStatus,
 
+        /* =========================
+           CURRENT SPEED
+           ========================= */
         ISNULL(
             LatestTelemetry.gps_speed,
             0
         ) AS CurrentSpeed,
 
+        /* =========================
+           IGNITION
+           ========================= */
         ISNULL(
             LatestTelemetry.I2,
             0
         ) AS I2,
 
+        /* =========================
+           LAST TELEMETRY
+           ========================= */
         LatestTelemetry.gps_time AS LastTelemetryTime
 
     FROM bs_route_master brm
 
+    /* =========================
+       VEHICLE / SERVICE
+       ========================= */
     LEFT JOIN {servicesTable} s
         ON s.id = brm.sys_service_id
 
+    /* =========================
+       STUDENT COUNT
+       ========================= */
     OUTER APPLY
     (
         SELECT
             COUNT(
                 DISTINCT brs.student_id
             ) AS Students
+
         FROM bs_route_students brs
+
         WHERE brs.route_id = brm.id
+
     ) StudentData
 
+    /* =========================
+       NEXT STOP / ETA
+       ========================= */
     OUTER APPLY
     (
         SELECT TOP 1
+
             sm.id AS StopId,
+
             sm.user_stop_name,
+
             sm.stop_order,
+
             sm.eta
 
         FROM bs_stop_master sm
 
         WHERE sm.route_id = brm.id
+
           AND sm.eta IS NOT NULL
+
           AND TRY_CONVERT(
                 TIME,
                 sm.eta
               ) IS NOT NULL
+
           AND TRY_CONVERT(
                 TIME,
                 sm.eta
               ) <> '00:00:00'
 
+          /* =========================
+             ONLY CURRENT/FUTURE ETA
+             ========================= */
+          AND TRY_CONVERT(
+                TIME,
+                sm.eta
+              ) >= @CurrentTime
+
+        /* =========================
+           SMALLEST FUTURE ETA
+           ========================= */
         ORDER BY
-            ABS(
-                DATEDIFF(
-                    SECOND,
-                    TRY_CONVERT(
-                        TIME,
-                        sm.eta
-                    ),
-                    @CurrentTime
-                )
-            ),
-            sm.stop_order
+
+            TRY_CONVERT(
+                TIME,
+                sm.eta
+            ) ASC,
+
+            sm.stop_order ASC
+
     ) NearestStop
 
+    /* =========================
+       LATEST TELEMETRY
+       ========================= */
     OUTER APPLY
     (
         SELECT TOP 1
+
             lt.sys_proc_time AS gps_time,
+
             lt.gps_speed,
+
             lt.I2
 
         FROM {latestTelemetryTable} lt
@@ -2164,40 +2360,72 @@ DECLARE @CurrentTime TIME = CAST(GETDATE() AS TIME);
               brm.sys_service_id
 
         ORDER BY
+
             lt.sys_proc_time DESC,
+
             lt.id DESC
+
     ) LatestTelemetry
 
     WHERE brm.sys_user_id = {userId}
 )
 
 SELECT
+
     Route,
+
     Vehicle,
+
     Students,
+
     StartTime,
+
     EndTime,
+
     StopName,
+
     ETA,
+
     EtaDifferenceMinutes,
+
     RouteStatus,
+
     VehicleLiveStatus,
+
     CurrentSpeed,
+
     I2,
+
     LastTelemetryTime
 
 FROM RoutePerformanceData
 
 ORDER BY
+
     CASE RouteStatus
-        WHEN 'Delayed' THEN 1
-        WHEN 'On Time' THEN 2
-        WHEN 'Not Started' THEN 3
-        WHEN 'ETA Not Available' THEN 4
-        WHEN 'Schedule Not Available' THEN 5
-        WHEN 'Completed' THEN 6
+
+        WHEN 'Delayed'
+            THEN 1
+
+        WHEN 'On Time'
+            THEN 2
+
+        WHEN 'Not Started'
+            THEN 3
+
+        WHEN 'ETA Not Available'
+            THEN 4
+
+        WHEN 'Schedule Not Available'
+            THEN 5
+
+        WHEN 'Route Time Completed'
+            THEN 6
+
         ELSE 7
+
     END,
+
     Route ASC;";
 
                 DataTable dataTable =
@@ -2276,6 +2504,7 @@ ORDER BY
                  */
                 string servicesTable;
                 string latestTelemetryTable;
+                string suffix = DateTime.Now.ToString("MMMyy", CultureInfo.InvariantCulture).ToLower();
 
                 if (string.Equals(
                     dashboard.database,
@@ -2283,14 +2512,14 @@ ORDER BY
                     StringComparison.OrdinalIgnoreCase))
                 {
                     servicesTable = "services";
-                    string telemetry_MMMyy = $"telemetry_{DateTime.Now:MMMyy}".ToLower();
+                    string telemetry_MMMyy = $"telemetry_{suffix}";
                     latestTelemetryTable = telemetry_MMMyy;
                 }
                 else
                 {
 
                     servicesTable = "atltracking.dbo.tbl_services";
-                    string telemetry_MMMyy = $"atltracking.dbo.tbl_telemetry_{DateTime.Now:MMMyy}".ToLower();
+                    string telemetry_MMMyy = $"atltracking.dbo.tbl_telemetry_{suffix}";
                     latestTelemetryTable = telemetry_MMMyy;
                 }
 
