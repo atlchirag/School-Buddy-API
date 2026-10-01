@@ -1259,10 +1259,22 @@ namespace SchoolBuddy_APIs.Controllers
 
                 if (allstudents != null && allstudents.Rows.Count > 0)
                 {
+
+                    //var res = from allstudent in allstudents.AsEnumerable()
+                    //          where Convert.ToString(allstudent["student_name"]).Trim()
+                    //                    .Equals(
+                    //                        Convert.ToString(assign_Student.student_name).Trim(),
+                    //                        StringComparison.OrdinalIgnoreCase)
+                    //             && Convert.ToString(allstudent["admission_no"]).Trim()
+                    //                    .Equals(
+                    //                        Convert.ToString(assign_Student.Admission_no).Trim(),
+                    //                        StringComparison.OrdinalIgnoreCase)
+                             // select allstudent;
                     var res = from allstudent in allstudents.AsEnumerable()
                               where allstudent.Field<string>("student_name") == assign_Student.student_name
                               && allstudent.Field<string>("admission_no") == assign_Student.Admission_no
                               select allstudent;
+
 
                     if (res.Any()) // If student exists
                     {

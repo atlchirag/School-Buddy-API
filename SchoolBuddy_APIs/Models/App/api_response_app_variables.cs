@@ -12,6 +12,32 @@ namespace SchoolBuddy_APIs.Models.App
 
     }
 
+    public class api_response_app_leave_request
+    {
+        public string msg { get; set; }
+
+        public List<LeaveRequestResponse> response { get; set; }
+        public string status { get; set; }
+
+    }
+    public class api_app_leave_request
+    {
+        public string msg { get; set; }
+        public string status { get; set; }
+
+    }
+
+
+    public class LeaveRequestResponse
+    {
+        public int Id { get; set; }
+        public string ParentId { get; set; }
+        public string Reason { get; set; }
+        public DateTime LeaveDate { get; set; }
+        public string IsApproved { get; set; }
+        public DateTime AppliedOn { get; set; }
+    }
+
     public class login
     {
         public string? id { get; set; }
@@ -76,6 +102,16 @@ namespace SchoolBuddy_APIs.Models.App
     }
 
 
+    public class histrytracking_var
+    {
+        public string? server_time { get; set; }
+        public string? gps_latitude { get; set; }
+        public string? gps_longitude { get; set; }
+        public string? latitude_direction { get; set; }
+        public string? longitude_direction { get; set; }
+    }
+
+
 
     public class stops_var
     { 
@@ -100,6 +136,13 @@ namespace SchoolBuddy_APIs.Models.App
     {
         public string msg { get; set; }
         public livetracking_var? response { get; set; }
+        public string status { get; set; }
+    }
+
+    public class histrytracking
+    {
+        public string msg { get; set; }
+        public List<histrytracking_var> trackingList { get; set; }
         public string status { get; set; }
     }
 

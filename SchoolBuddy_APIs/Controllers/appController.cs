@@ -2202,6 +2202,283 @@ ORDER BY bs.student_name;
             }
         }
 
+        [HttpGet]
+        public IActionResult historytracking([FromQuery] string route_id)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(route_id))
+                {
+                    return Content(
+                        JsonConvert.SerializeObject(new histrytracking
+                        {
+                            status = "0",
+                            msg = "fail"
+                        }),
+                        "application/json");
+                }
 
+                string query = @$"
+            SELECT
+                t.sys_proc_time,
+                t.gps_latitude,
+                t.gps_longitude,
+                t.latitude_direction,
+                t.longitude_direction
+            FROM tbl_telemetry_sep26 t
+            INNER JOIN bs_route_master r
+                ON r.sys_service_id = t.sys_service_id
+            WHERE r.id = {route_id}
+              AND t.i2 = 1
+              AND CAST(t.sys_proc_time AS DATE) = CAST(GETDATE() AS DATE)
+              AND CAST(t.sys_proc_time AS TIME) >= r.start_time_up
+              AND CAST(t.sys_proc_time AS TIME) <= r.end_time_up
+              AND CAST(t.sys_proc_time AS TIME) <= CAST(GETDATE() AS TIME)
+            ORDER BY t.sys_proc_time;";
+
+                DataTable dt = _sql_qury_execution.DML_Select(query);
+
+                if (dt.Rows.Count == 0)
+                {
+                    return Content(
+                        JsonConvert.SerializeObject(new histrytracking
+                        {
+                            status = "0",
+                            msg = "No data found"
+                        }),
+                        "application/json");
+                }   
+
+                List<histrytracking_var> trackingListresponse = new List<histrytracking_var>();
+                
+
+                foreach (DataRow row in dt.Rows)
+                {
+                    trackingListresponse.Add(new histrytracking_var
+                    {
+                        server_time = row["sys_proc_time"].ToString(),
+                        gps_latitude = row["gps_latitude"].ToString(),
+                        gps_longitude = row["gps_longitude"].ToString(),
+                        latitude_direction = row["latitude_direction"].ToString(),
+                        longitude_direction = row["longitude_direction"].ToString()
+                    });
+                }
+
+                return Content(
+                       JsonConvert.SerializeObject(new histrytracking
+                       {
+                           status = "1",
+                           trackingList=trackingListresponse,
+                           msg = "Success"
+                       }),
+                       "application/json");
+            }
+            catch (Exception ex)
+            {
+                return Content(
+                    JsonConvert.SerializeObject(new histrytracking
+                    {
+                        status = "0",
+                        msg = "fail"
+                    }),
+                    "application/json");
+            }
+        }
+
+        [HttpPost]
+
+        public IActionResult LeaveRequest([FromQuery] string parent_id, [FromQuery] string reason, [FromQuery] DateTime leave_date)
+        {
+            try
+            {
+
+                if (parent_id != "" && reason != "" && leave_date != DateTime.MinValue)
+                {
+                    string checkuser = $"select * from bs_user_master where id = {parent_id}";
+                    DataTable data = _sql_qury_execution.DML_Select(checkuser);
+                    if (data != null)
+                    {
+                        if (data.Rows.Count > 0)
+                        {
+                            string query = $@"INSERT INTO bs_leave_master
+                  (parent_id, reason, leave_date, is_approved, applied_on)
+                  VALUES
+                  ({parent_id}, '{reason}', '{leave_date:yyyy-MM-dd HH:mm:ss}', 0, GETDATE())";
+                            int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                            if (rowaffected > 0)
+                            {
+                                api_app_leave_request arav1 = new api_app_leave_request
+                                {
+                                    status = "1",
+                                    msg = "success"
+
+                                };
+                                return Content(JsonConvert.SerializeObject(arav1), "application/json");
+
+                            }
+                            api_app_leave_request arav2 = new api_app_leave_request
+                            {
+                                status = "-1",
+                                msg = "fail"
+
+                            };
+                            return Content(JsonConvert.SerializeObject(arav2), "application/json");
+                        }
+                        else
+                        {
+                            api_app_leave_request arav5 = new api_app_leave_request
+                            {
+                                status = "-1",
+                                msg = "No user found with the provided User_ID"
+
+                            };
+                            return Content(JsonConvert.SerializeObject(arav5), "application/json");
+                        }
+                    }
+                    else
+                    {
+                        api_app_leave_request arav4 = new api_app_leave_request
+                        {
+                            status = "-1",
+                            msg = "no user found with the provided User_ID"
+
+                        };
+                        return Content(JsonConvert.SerializeObject(arav4), "application/json");
+                    }
+
+
+
+                }
+                api_response_app_leave_request arav3 = new api_response_app_leave_request
+                {
+                    status = "0",
+                    msg = "All field must be filled"
+
+                };
+                return Content(JsonConvert.SerializeObject(arav3), "application/json");
+
+
+
+
+            }//try block ends.
+            catch (Exception ex)
+            {
+                api_response_app_leave_request arav4 = new api_response_app_leave_request
+                {
+                    status = "0",
+                    msg = ex.Message
+
+                };
+                return Content(JsonConvert.SerializeObject(arav4), "application/json");
+
+
+            }//catch block ends.
+        }
+
+
+
+
+        [HttpPost]
+
+        public IActionResult GetLeaveRequest([FromQuery] string parent_id)
+        {
+            try
+            {
+
+                if (parent_id != "")
+                {
+                    string checkuser = $"select * from bs_user_master where id = {parent_id}";
+                    DataTable data = _sql_qury_execution.DML_Select(checkuser);
+                    if (data != null && data.Rows.Count > 0)
+                    {
+                  
+                            string query = $@"SELECT * FROM bs_leave_master WHERE parent_id = {parent_id} order by applied_on desc";
+                            DataTable dt = _sql_qury_execution.DML_Select(query);
+
+                        if (dt != null && dt.Rows.Count > 0)
+                        {
+                            List<LeaveRequestResponse> list = new List<LeaveRequestResponse>();
+
+                            foreach (DataRow row in dt.Rows)
+                            {
+                                LeaveRequestResponse leave = new LeaveRequestResponse
+                                {
+                                    Id = Convert.ToInt32(row["id"]),
+                                    ParentId = row["parent_id"].ToString(),
+                                    Reason = row["reason"].ToString(),
+                                    LeaveDate = Convert.ToDateTime(row["leave_date"]),
+                                    IsApproved = Convert.ToString(row["is_approved"]),
+                                    AppliedOn = Convert.ToDateTime(row["applied_on"])
+                                };
+
+                                list.Add(leave);
+                            }
+
+                            api_response_app_leave_request response = new api_response_app_leave_request
+                            {
+                                msg = "success",
+                                response = list,
+                                status = "1"
+                            };
+
+                            return Content(
+                                JsonConvert.SerializeObject(response),
+                                "application/json"
+                            );
+                        }
+
+                        api_response_app_leave_request errorResponse = new api_response_app_leave_request
+                        {
+                            msg = "No leave request found",
+                            response = null,
+                            status = "0"
+                        };
+
+                        return Content(
+                            JsonConvert.SerializeObject(errorResponse),
+                            "application/json"
+                        );
+
+
+                    }
+                    else
+                    {
+                        api_response_app_leave_request arav4 = new api_response_app_leave_request
+                        {
+                            status = "-1",
+                            msg = "No user found with the provided User_ID"
+
+                        };
+                        return Content(JsonConvert.SerializeObject(arav4), "application/json");
+                    }
+
+
+
+                }
+                api_response_app_leave_request arav3 = new api_response_app_leave_request
+                {
+                    status = "0",
+                    msg = "User_ID is required"
+
+                };
+                return Content(JsonConvert.SerializeObject(arav3), "application/json");
+
+
+
+
+            }//try block ends.
+            catch (Exception ex)
+            {
+                api_response_app_leave_request arav4 = new api_response_app_leave_request
+                {
+                    status = "0",
+                    msg = ex.Message
+
+                };
+                return Content(JsonConvert.SerializeObject(arav4), "application/json");
+
+
+            }//catch block ends.
+        }
     }
 }
