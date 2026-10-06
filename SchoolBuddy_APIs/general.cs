@@ -54,7 +54,7 @@ namespace SchoolBuddy_APIs
                 smtpclient.EnableSsl = true;
 
                 NetworkCredential basicCredential1 = new
-                NetworkCredential(MailFrom, "Atl@135#@");
+                NetworkCredential(MailFrom, "tyqm aita mjbl fpgo");
                 smtpclient.UseDefaultCredentials = false;
                 smtpclient.Credentials = basicCredential1;
                 try
@@ -165,7 +165,8 @@ namespace SchoolBuddy_APIs
             {
                 string otp = otpgenerator("JBSWY3DPEHPK3PXP");
                 bool result = await callsendsmsapi(parent_name,otp,contact,sender_id);
-                if(result)
+                //bool result2 = await SendSmsAsync(contact,parent_name);
+                if (result)
                 {
                     return otp;
                 }
@@ -182,13 +183,24 @@ namespace SchoolBuddy_APIs
         public async Task<bool> callsendsmsapi(string parent_name,string otp,string number,string sender_id)
         {
             //string Message = $"Hey {parent_name}, your code is {otp}. Please enter the provided code on the page where you asked for OTP on schoolbuddy.For Inqueried Contact - +911149039798/799/718 Email- support@atlantasys.com -Atlanta Systems";
-            string template_id = "1107171799923740250";
+            //        string Message =
+            //$"Hey {parent_name}, your SchoolBuddy OTP is {otp}. " +
+            //$"Please enter this code on the SchoolBuddy page where you requested the OTP.";
+
+            //string Message = $"Dear {parent_name}, your SchoolBuddy verification code is {otp}. Please enter this code to continue. Do not share this code with anyone.";
+
+            string Message = $"Dear {parent_name}, your SchoolBuddy verification code is {otp}. Please enter this code to continue. Do not share this code with anyone. -Atlanta Systems";
+            //string template_id = "1107171799923740250";
+            string template_id = "1177179120268369117";
             string username = "Atlanta-Systems";
             string password = "Sandeep@123";
-            string Message = $"Dear Sir/Mam Vehicle No. - {otp}. Your vehicle VLTD is not functional on CDAC Portal, So please contact to your nearest RFC and get this issue fixed. Contact - +911149039798/799/718 Email- support@atlantasys.com -Atlanta Systems";
 
-            // Constructing the JSON payload
-            string jsonPayload = "{ \"from\":\"" + sender_id + "\",\"peid\":\"1101423770000011614\", \"to\":\""+number+"\", \"text\":\""+Message+"\", \"regional\": { \"indiaDlt\": { \"principalEntityId\": \"1101423770000011614\", \"contentTemplateId\": \""+template_id+"\" }}}";
+            number = "91" + number;
+            string sender = "TSTTAV";
+       
+            string jsonPayload = "{ \"from\":\"" + sender + "\",\"peid\":\"1101423770000011614\", \"to\":\""+number+"\", \"text\":\""+Message+"\", \"regional\": { \"indiaDlt\": { \"principalEntityId\": \"1101423770000011614\", \"contentTemplateId\": \""+template_id+"\" }}}";
+
+            
 
             // Encoding credentials for basic authentication
             string authHeader = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username}:{password}"));
@@ -204,7 +216,7 @@ namespace SchoolBuddy_APIs
                     //client.DefaultRequestHeaders.Add("content-type", "application/json");
 
                     // Sending POST request
-                    HttpResponseMessage response = await client.PostAsync("http://api.infobip.com/sms/1/text/single", new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
+                    HttpResponseMessage response = await client.PostAsync("https://api.infobip.com/sms/1/text/single", new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
 
                     // Reading response
                     string responseBody = await response.Content.ReadAsStringAsync();
@@ -231,10 +243,10 @@ namespace SchoolBuddy_APIs
 
 
 
-        public static async Task SendSmsAsync(string[] data, string vehicle)
+        public async Task<bool> SendSmsAsync(string data, string vehicle)
         {
             HttpClient client = new HttpClient();
-            string number = "91" + data[0];
+            string number = "91" + data;
             //string number = "918755633016";
 
             // Message content
@@ -277,13 +289,16 @@ namespace SchoolBuddy_APIs
             if (response.IsSuccessStatusCode)
             {
                 Console.WriteLine($"{number} Done");
+                return true;
             }
             else
             {
                 Console.WriteLine($"Error sending SMS: {response.StatusCode}");
                 var errorMessage = await response.Content.ReadAsStringAsync();
                 Console.WriteLine($"Response: {errorMessage}");
+                return false;
             }
+            
         }
 
 

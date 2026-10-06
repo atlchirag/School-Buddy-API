@@ -31,11 +31,35 @@ namespace SchoolBuddy_APIs.Models.App
     public class LeaveRequestResponse
     {
         public int Id { get; set; }
-        public string ParentId { get; set; }
+        public string student_name { get; set; }
+        public string student_id { get; set; }
         public string Reason { get; set; }
         public DateTime LeaveDate { get; set; }
         public string IsApproved { get; set; }
         public DateTime AppliedOn { get; set; }
+        public int Status { get; set; }
+        public string StatusText { get; set; }
+        public string Remark { get; set; }
+    }
+
+    /// <summary>bs_leave_master.status values.</summary>
+    public static class LeaveStatus
+    {
+        public const int Applied = 0;
+        public const int Approved = 1;
+        public const int Rejected = 2;
+        public const int Cancelled = 3;
+
+        public static bool IsActionable(int status) =>
+            status == Approved || status == Rejected || status == Cancelled;
+
+        public static string Text(int status) => status switch
+        {
+            Approved => "Approved",
+            Rejected => "Rejected",
+            Cancelled => "Cancelled",
+            _ => "Applied"
+        };
     }
 
     public class login

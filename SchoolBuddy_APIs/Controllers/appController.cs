@@ -421,7 +421,8 @@ namespace SchoolBuddy_APIs.Controllers
                                     set bs_user_master.bs_password = '{newpassword}' from bs_user_master
                                     inner join bs_student_master_backup bsmb
                                     on bsmb.mobile_no1 = bs_user_master.bs_user_name
-                                    where bsmb.email = '{email}'";
+                                    where  bsmb.email = '{email.Trim()}'
+   OR bsmb.mobile_no1 = '{email.Trim()}'";
                     int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query);
                     if (rowaffected > 0)
                     {
@@ -476,21 +477,23 @@ namespace SchoolBuddy_APIs.Controllers
         ///if database is newtrack, table used : telemetry_month.
         ///if database is alttracking, table used : tbl_telemetry_month.
         ///</summary>
-        public async Task<IActionResult> generateotp([FromQuery] string contactormail, string parent_name)
+        public async Task<IActionResult> generateotp([FromQuery] string contactormail)
         {
 
             try
             {
                 general gen = new general();
+
                 if (contactormail.Contains('@'))
                 {
-                    string query_To_check_presence = $"select bsmb.email,bum.contact_no,bum.id  from bs_user_master  bum inner join bs_student_master_backup bsmb on bum.bs_user_name = bsmb.mobile_no1 where bsmb.email='{contactormail}'";
+                    //string query_To_check_presence = $"select bum.bs_user_name,bsm.sender_id,bsmb.father_name from bs_user_master bum inner join bs_student_master_backup bsmb on bsmb.bs_user_id=bum.id left join bs_sms_master bsm on bum.sys_user_id = bsm.sys_user_id where bum.bs_user_name = '{contactormail}'";
+                    string query_To_check_presence = $"select bum.id ,bum.bs_user_name,bsmb.father_name from bs_student_master_backup bsmb inner join bs_user_master bum on bum.bs_user_name=bsmb.mobile_no1 where bsmb.email='{contactormail}'";
                     DataTable dt = _sql_qury_execution.DML_Select(query_To_check_presence);
                     if (dt != null)
                     {
                         if (dt.Rows.Count > 0)
                         {
-                            string otp = gen.SendEmail("ticket@atlantasys.com", contactormail, parent_name);
+                            string otp = gen.SendEmail("noreply@trackofy.com", contactormail, dt.Rows[0]["father_name"].ToString());
                             if (otp != "0")
                             {
                                 string query_to_update_otp = $"update bs_user_master set otp = {otp} where id = '{dt.Rows[0]["id"]}'";
@@ -539,7 +542,7 @@ namespace SchoolBuddy_APIs.Controllers
                 {
                     //string query_To_check_presence = $"select * from bs_user_master where bs_user_name = '{contactormail}'";
 
-                    string query_To_check_presence = $"select bum.bs_user_name,bsm.sender_id from bs_user_master bum inner join bs_sms_master bsm on bum.sys_user_id = bsm.sys_user_id where bum.bs_user_name = '{contactormail}'";
+                    string query_To_check_presence = $"select bum.id ,bum.bs_user_name,bsm.sender_id,bsmb.father_name from bs_user_master bum inner join bs_student_master_backup bsmb on bsmb.bs_user_id=bum.id left join bs_sms_master bsm on bum.sys_user_id = bsm.sys_user_id where bum.bs_user_name = '{contactormail}'";
 
 
                     DataTable dt = _sql_qury_execution.DML_Select(query_To_check_presence);
@@ -547,7 +550,7 @@ namespace SchoolBuddy_APIs.Controllers
                     {
                         if (dt.Rows.Count > 0)
                         {
-                            string otp = await gen.SendSms(parent_name, "9625258231", dt.Rows[0]["sender_id"].ToString());
+                            string otp = await gen.SendSms(dt.Rows[0]["father_name"].ToString(), contactormail, dt.Rows[0]["sender_id"].ToString());
                             if (otp != "0")
                             {
                                 string query_to_update_otp = $"update bs_user_master set otp = {otp} where id = '{dt.Rows[0]["id"]}'";
@@ -630,11 +633,12 @@ namespace SchoolBuddy_APIs.Controllers
 
                 if (email != "" && otp != "")
                 {
-                    string query = $@"select bs_user_master.otp from bs_user_master 
-                                    inner join 
-                                    bs_student_master_backup
-                                    on bs_user_master.bs_user_name = bs_student_master_backup.mobile_no1
-                                    where bs_student_master_backup.email = '{email.Trim()}'";
+                    string query = $@"SELECT bs_user_master.otp
+FROM bs_user_master
+INNER JOIN bs_student_master_backup
+    ON bs_user_master.bs_user_name = bs_student_master_backup.mobile_no1
+WHERE bs_student_master_backup.email = '{email.Trim()}'
+   OR bs_student_master_backup.mobile_no1 = '{email.Trim()}';";
                     DataTable dt = _sql_qury_execution.DML_Select(query);
                     if (dt != null)
                     {
@@ -754,8 +758,8 @@ namespace SchoolBuddy_APIs.Controllers
                 left join atltracking.dbo.bs_route_students brs on bsmb.id = brs.student_id
                 left join atltracking.dbo.bs_route_master brm on brm.id = brs.route_id
                 left join atltracking.dbo.tbl_services s on brm.sys_service_id = s.id
-                left join atltracking.dbo.bs_driver bd on s.id = bd.sys_service_id
-                where bsmb.bs_user_id = '" + parent_id + @"' 
+ left join atltracking.dbo.tbl_driver_master bd on s.id = bd.service_id
+where bsmb.bs_user_id = '" + parent_id + @"' 
                    or bsmb.parent_id = '" + parent_id + "'";
                 }
                 else
@@ -2218,6 +2222,8 @@ ORDER BY bs.student_name;
                         "application/json");
                 }
 
+                string monthlyTableName = $"tbl_telemetry_{DateTime.Now:MMMyy}".ToLower();
+
                 string query = @$"
             SELECT
                 t.sys_proc_time,
@@ -2225,7 +2231,7 @@ ORDER BY bs.student_name;
                 t.gps_longitude,
                 t.latitude_direction,
                 t.longitude_direction
-            FROM tbl_telemetry_sep26 t
+            FROM {monthlyTableName} t
             INNER JOIN bs_route_master r
                 ON r.sys_service_id = t.sys_service_id
             WHERE r.id = {route_id}
@@ -2287,23 +2293,26 @@ ORDER BY bs.student_name;
 
         [HttpPost]
 
-        public IActionResult LeaveRequest([FromQuery] string parent_id, [FromQuery] string reason, [FromQuery] DateTime leave_date)
+        public IActionResult LeaveRequest([FromQuery] string parent_id, [FromQuery] string reason, [FromQuery] DateTime leave_date, [FromQuery]  string student_id)
         {
             try
             {
 
-                if (parent_id != "" && reason != "" && leave_date != DateTime.MinValue)
+                if (parent_id != "" && reason != "" && leave_date != DateTime.MinValue && student_id != "" && leave_date >= DateTime.Now)
                 {
-                    string checkuser = $"select * from bs_user_master where id = {parent_id}";
+                    string checkuser = $@"SELECT *
+FROM bs_student_master_backup
+WHERE id = {student_id}
+  AND bs_user_id = {parent_id};";
                     DataTable data = _sql_qury_execution.DML_Select(checkuser);
                     if (data != null)
                     {
                         if (data.Rows.Count > 0)
                         {
                             string query = $@"INSERT INTO bs_leave_master
-                  (parent_id, reason, leave_date, is_approved, applied_on)
+                  ( reason, applied_date, is_approved, applied_on, student_id)
                   VALUES
-                  ({parent_id}, '{reason}', '{leave_date:yyyy-MM-dd HH:mm:ss}', 0, GETDATE())";
+                  ('{reason}', '{leave_date:yyyy-MM-dd HH:mm:ss}', 0, GETDATE(), '{student_id}')";
                             int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query);
                             if (rowaffected > 0)
                             {
@@ -2352,7 +2361,7 @@ ORDER BY bs.student_name;
                 api_response_app_leave_request arav3 = new api_response_app_leave_request
                 {
                     status = "0",
-                    msg = "All field must be filled"
+                    msg = "Please fill in all fields and select a valid date (today or later). "
 
                 };
                 return Content(JsonConvert.SerializeObject(arav3), "application/json");
@@ -2392,7 +2401,14 @@ ORDER BY bs.student_name;
                     if (data != null && data.Rows.Count > 0)
                     {
                   
-                            string query = $@"SELECT * FROM bs_leave_master WHERE parent_id = {parent_id} order by applied_on desc";
+                            string query = $@"SELECT 
+    lm.*,
+    sm.student_name
+FROM bs_leave_master lm
+INNER JOIN bs_student_master_backup sm
+    ON sm.id = lm.student_id
+WHERE sm.parent_id = {parent_id}
+ORDER BY lm.applied_on DESC;";
                             DataTable dt = _sql_qury_execution.DML_Select(query);
 
                         if (dt != null && dt.Rows.Count > 0)
@@ -2401,14 +2417,22 @@ ORDER BY bs.student_name;
 
                             foreach (DataRow row in dt.Rows)
                             {
+                                // is_approved: 0 Applied, 1 Approved, 2 Rejected
+                                int status = row["is_approved"] == DBNull.Value ? LeaveStatus.Applied : Convert.ToInt32(row["is_approved"]);
+
                                 LeaveRequestResponse leave = new LeaveRequestResponse
                                 {
                                     Id = Convert.ToInt32(row["id"]),
-                                    ParentId = row["parent_id"].ToString(),
+                                    student_id = row["student_id"].ToString(),
+                                    student_name = row["student_name"].ToString(),
                                     Reason = row["reason"].ToString(),
-                                    LeaveDate = Convert.ToDateTime(row["leave_date"]),
-                                    IsApproved = Convert.ToString(row["is_approved"]),
-                                    AppliedOn = Convert.ToDateTime(row["applied_on"])
+                                    LeaveDate = Convert.ToDateTime(row["applied_date"]),
+                                    // Kept as "True"/"False" like the old bit column, so the current app build doesn't break.
+                                    IsApproved = status == LeaveStatus.Approved ? "True" : "False",
+                                    AppliedOn = Convert.ToDateTime(row["applied_on"]),
+                                    Status = status,
+                                    StatusText = LeaveStatus.Text(status),
+                                    Remark = dt.Columns.Contains("remark") ? Convert.ToString(row["remark"]) : ""
                                 };
 
                                 list.Add(leave);

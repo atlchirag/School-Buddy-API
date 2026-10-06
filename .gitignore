@@ -18,4 +18,5 @@ docs/
 bin/
 obj/
 Debug/
-Release/
+Release/SchoolBuddy_APIs/appsettings.json
+SchoolBuddy_APIs/*firebase-adminsdk*.json
