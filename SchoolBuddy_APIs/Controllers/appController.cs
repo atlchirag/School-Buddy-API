@@ -46,16 +46,20 @@ namespace SchoolBuddy_APIs.Controllers
                 }
 
                 // MAIN LOGIN QUERY
-                string query = $@"
+                string query = @"
             select bum.id as id, bum.sys_user_id as schoolId, bum.bs_user_name as contact,
                    bsmb.father_name as fatherName, bsmb.mother_name as motherName,
                    bsmb.street as address, bsmb.email
             from bs_user_master bum
             inner join bs_student_master_backup bsmb 
                 on bum.bs_user_name = bsmb.mobile_no1 
-            where bum.bs_user_name = '{username}' and bum.bs_password = '{password}'";
+            where bum.bs_user_name = @Username and bum.bs_password = @Password";
 
-                DataTable dt = _sql_qury_execution.DML_Select(query);
+                DataTable dt = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@Username", username },
+                    { "@Password", password }
+                });
 
                 if (dt == null || dt.Rows.Count == 0)
                 {
@@ -74,8 +78,11 @@ namespace SchoolBuddy_APIs.Controllers
                 }
 
                 // CHECK IN NEWTRACK USERS
-                string query_newtrack = $"select id,sys_username from users where id = '{schoolId}'";
-                DataTable dt_newtrack = _sql_qury_execution.DML_Select(query_newtrack);
+                string query_newtrack = "select id,sys_username from users where id = @SchoolId";
+                DataTable dt_newtrack = _sql_qury_execution.DML_Select(query_newtrack, new Dictionary<string, object>
+                {
+                    { "@SchoolId", schoolId }
+                });
 
                 bool isNewtrack = dt_newtrack != null && dt_newtrack.Rows.Count > 0;
 
@@ -86,8 +93,11 @@ namespace SchoolBuddy_APIs.Controllers
                 else
                 {
                     // CHECK IN ATLTRACKING
-                    string query_atltracking1 = $"select id,sys_username from atltracking.dbo.tbl_users where id = '{schoolId}'";
-                    DataTable dt_at = _sql_qury_execution.DML_Select(query_atltracking1);
+                    string query_atltracking1 = "select id,sys_username from atltracking.dbo.tbl_users where id = @SchoolId";
+                    DataTable dt_at = _sql_qury_execution.DML_Select(query_atltracking1, new Dictionary<string, object>
+                    {
+                        { "@SchoolId", schoolId }
+                    });
 
                     if (dt_at == null || dt_at.Rows.Count == 0)
                     {
@@ -105,14 +115,23 @@ namespace SchoolBuddy_APIs.Controllers
                 if (!string.IsNullOrWhiteSpace(fcm))
                 {
                     query_to_insert_login_details =
-                        $"insert into bs_parent_login_log (bs_user_id,login_time,source,fcm) " +
-                        $"values ('{userId}',getdate(),'APP','{fcm}')";
+                        "insert into bs_parent_login_log (bs_user_id,login_time,source,fcm) " +
+                        "values (@UserId,getdate(),'APP',@Fcm)";
 
                     string updateToken =
-                        $"update bs_user_master set auid='{firebaseToken_android}', iuid='{firebaseToken_Ios}' where id={userId}";
+                        "update bs_user_master set auid=@AndroidToken, iuid=@IosToken where id=@UserId";
 
-                    _sql_qury_execution.DML_Insert_Update_Delete(query_to_insert_login_details);
-                    _sql_qury_execution.DML_Insert_Update_Delete(updateToken);
+                    _sql_qury_execution.DML_Insert_Update_Delete(query_to_insert_login_details, new Dictionary<string, object>
+                    {
+                        { "@UserId", userId },
+                        { "@Fcm", fcm }
+                    });
+                    _sql_qury_execution.DML_Insert_Update_Delete(updateToken, new Dictionary<string, object>
+                    {
+                        { "@UserId", userId },
+                        { "@AndroidToken", firebaseToken_android ?? "" },
+                        { "@IosToken", firebaseToken_Ios ?? "" }
+                    });
                 }
 
                 // RESPONSE OBJECT (unchanged)
@@ -417,13 +436,17 @@ namespace SchoolBuddy_APIs.Controllers
 
                 if (email != "" && newpassword != "")
                 {
-                    string query = $@"update bs_user_master 
-                                    set bs_user_master.bs_password = '{newpassword}' from bs_user_master
+                    string query = @"update bs_user_master 
+                                    set bs_user_master.bs_password = @NewPassword from bs_user_master
                                     inner join bs_student_master_backup bsmb
                                     on bsmb.mobile_no1 = bs_user_master.bs_user_name
-                                    where  bsmb.email = '{email.Trim()}'
-   OR bsmb.mobile_no1 = '{email.Trim()}'";
-                    int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                                    where  bsmb.email = @Email
+   OR bsmb.mobile_no1 = @Email";
+                    int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query, new Dictionary<string, object>
+                    {
+                        { "@NewPassword", newpassword },
+                        { "@Email", email.Trim() }
+                    });
                     if (rowaffected > 0)
                     {
                         api_response_app_variables arav1 = new api_response_app_variables
@@ -487,8 +510,11 @@ namespace SchoolBuddy_APIs.Controllers
                 if (contactormail.Contains('@'))
                 {
                     //string query_To_check_presence = $"select bum.bs_user_name,bsm.sender_id,bsmb.father_name from bs_user_master bum inner join bs_student_master_backup bsmb on bsmb.bs_user_id=bum.id left join bs_sms_master bsm on bum.sys_user_id = bsm.sys_user_id where bum.bs_user_name = '{contactormail}'";
-                    string query_To_check_presence = $"select bum.id ,bum.bs_user_name,bsmb.father_name from bs_student_master_backup bsmb inner join bs_user_master bum on bum.bs_user_name=bsmb.mobile_no1 where bsmb.email='{contactormail}'";
-                    DataTable dt = _sql_qury_execution.DML_Select(query_To_check_presence);
+                    string query_To_check_presence = "select bum.id ,bum.bs_user_name,bsmb.father_name from bs_student_master_backup bsmb inner join bs_user_master bum on bum.bs_user_name=bsmb.mobile_no1 where bsmb.email=@ContactOrMail";
+                    DataTable dt = _sql_qury_execution.DML_Select(query_To_check_presence, new Dictionary<string, object>
+                    {
+                        { "@ContactOrMail", contactormail }
+                    });
                     if (dt != null)
                     {
                         if (dt.Rows.Count > 0)
@@ -496,8 +522,12 @@ namespace SchoolBuddy_APIs.Controllers
                             string otp = gen.SendEmail("noreply@trackofy.com", contactormail, dt.Rows[0]["father_name"].ToString());
                             if (otp != "0")
                             {
-                                string query_to_update_otp = $"update bs_user_master set otp = {otp} where id = '{dt.Rows[0]["id"]}'";
-                                int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query_to_update_otp);
+                                string query_to_update_otp = "update bs_user_master set otp = @Otp where id = @Id";
+                                int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query_to_update_otp, new Dictionary<string, object>
+                                {
+                                    { "@Otp", otp },
+                                    { "@Id", dt.Rows[0]["id"] }
+                                });
                                 if (rowaffected > 0)
                                 {
                                     api_response_app_variables arav_otp = new api_response_app_variables
@@ -542,10 +572,13 @@ namespace SchoolBuddy_APIs.Controllers
                 {
                     //string query_To_check_presence = $"select * from bs_user_master where bs_user_name = '{contactormail}'";
 
-                    string query_To_check_presence = $"select bum.id ,bum.bs_user_name,bsm.sender_id,bsmb.father_name from bs_user_master bum inner join bs_student_master_backup bsmb on bsmb.bs_user_id=bum.id left join bs_sms_master bsm on bum.sys_user_id = bsm.sys_user_id where bum.bs_user_name = '{contactormail}'";
+                    string query_To_check_presence = "select bum.id ,bum.bs_user_name,bsm.sender_id,bsmb.father_name from bs_user_master bum inner join bs_student_master_backup bsmb on bsmb.bs_user_id=bum.id left join bs_sms_master bsm on bum.sys_user_id = bsm.sys_user_id where bum.bs_user_name = @ContactOrMail";
 
 
-                    DataTable dt = _sql_qury_execution.DML_Select(query_To_check_presence);
+                    DataTable dt = _sql_qury_execution.DML_Select(query_To_check_presence, new Dictionary<string, object>
+                    {
+                        { "@ContactOrMail", contactormail }
+                    });
                     if (dt != null)
                     {
                         if (dt.Rows.Count > 0)
@@ -553,8 +586,12 @@ namespace SchoolBuddy_APIs.Controllers
                             string otp = await gen.SendSms(dt.Rows[0]["father_name"].ToString(), contactormail, dt.Rows[0]["sender_id"].ToString());
                             if (otp != "0")
                             {
-                                string query_to_update_otp = $"update bs_user_master set otp = {otp} where id = '{dt.Rows[0]["id"]}'";
-                                int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query_to_update_otp);
+                                string query_to_update_otp = "update bs_user_master set otp = @Otp where id = @Id";
+                                int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query_to_update_otp, new Dictionary<string, object>
+                                {
+                                    { "@Otp", otp },
+                                    { "@Id", dt.Rows[0]["id"] }
+                                });
                                 if (rowaffected > 0)
                                 {
                                     api_response_app_variables arav_otp5 = new api_response_app_variables
@@ -633,13 +670,16 @@ namespace SchoolBuddy_APIs.Controllers
 
                 if (email != "" && otp != "")
                 {
-                    string query = $@"SELECT bs_user_master.otp
+                    string query = @"SELECT bs_user_master.otp
 FROM bs_user_master
 INNER JOIN bs_student_master_backup
     ON bs_user_master.bs_user_name = bs_student_master_backup.mobile_no1
-WHERE bs_student_master_backup.email = '{email.Trim()}'
-   OR bs_student_master_backup.mobile_no1 = '{email.Trim()}';";
-                    DataTable dt = _sql_qury_execution.DML_Select(query);
+WHERE bs_student_master_backup.email = @Email
+   OR bs_student_master_backup.mobile_no1 = @Email;";
+                    DataTable dt = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@Email", email.Trim() }
+                    });
                     if (dt != null)
                     {
                         if (dt.Rows.Count > 0)
@@ -716,12 +756,15 @@ WHERE bs_student_master_backup.email = '{email.Trim()}'
                 }
 
                 // STEP 1: Get sys_user_id for this parent
-                string schoolQuery = $@"
+                string schoolQuery = @"
             SELECT TOP 1 sys_user_id 
             FROM bs_student_master_backup 
-            WHERE bs_user_id = '{parent_id}' OR parent_id = '{parent_id}'";
+            WHERE bs_user_id = @ParentId OR parent_id = @ParentId";
 
-                DataTable schDT = _sql_qury_execution.DML_Select(schoolQuery);
+                DataTable schDT = _sql_qury_execution.DML_Select(schoolQuery, new Dictionary<string, object>
+                {
+                    { "@ParentId", parent_id }
+                });
 
                 string sys_userid = (schDT != null && schDT.Rows.Count > 0)
                                     ? schDT.Rows[0]["sys_user_id"].ToString()
@@ -743,8 +786,8 @@ WHERE bs_student_master_backup.email = '{email.Trim()}'
                 inner join bs_route_master brm on brm.id = brs.route_id
                 inner join services on brm.sys_service_id = services.id
                 left join bs_driver bd on services.id = bd.sys_service_id
-                where bsmb.bs_user_id = '" + parent_id + @"' 
-                   or bsmb.parent_id = '" + parent_id + "'";
+                where bsmb.bs_user_id = @ParentId
+                   or bsmb.parent_id = @ParentId";
                 }
                 else if (database == "atltracking")
                 {
@@ -759,15 +802,18 @@ WHERE bs_student_master_backup.email = '{email.Trim()}'
                 left join atltracking.dbo.bs_route_master brm on brm.id = brs.route_id
                 left join atltracking.dbo.tbl_services s on brm.sys_service_id = s.id
  left join atltracking.dbo.tbl_driver_master bd on s.id = bd.service_id
-where bsmb.bs_user_id = '" + parent_id + @"' 
-                   or bsmb.parent_id = '" + parent_id + "'";
+where bsmb.bs_user_id = @ParentId
+                   or bsmb.parent_id = @ParentId";
                 }
                 else
                 {
                     return Content(JsonConvert.SerializeObject(new studentlist { status = "0", msg = "fail" }), "application/json");
                 }
 
-                DataTable dt = _sql_qury_execution.DML_Select(queryforgettingstudentdetails);
+                DataTable dt = _sql_qury_execution.DML_Select(queryforgettingstudentdetails, new Dictionary<string, object>
+                {
+                    { "@ParentId", parent_id }
+                });
 
                 if (dt == null)
                 {
@@ -991,8 +1037,11 @@ where bsmb.bs_user_id = '" + parent_id + @"'
 
             try
             {
-                string query = $"select message,date_time from bs_notification_parent where parent_id = {parent_id} order by id desc";
-                DataTable dt = _sql_qury_execution.DML_Select(query);
+                string query = "select message,date_time from bs_notification_parent where parent_id = @ParentId order by id desc";
+                DataTable dt = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@ParentId", parent_id }
+                });
                 if (dt != null)
                 {
                     if (dt.Rows.Count > 0)
@@ -1072,8 +1121,11 @@ where bsmb.bs_user_id = '" + parent_id + @"'
 
             try
             {
-                string query = $"select message,sent_date from bs_broadcast_msg where route_id = {route_id} order by id desc";
-                DataTable dt = _sql_qury_execution.DML_Select(query);
+                string query = "select message,sent_date from bs_broadcast_msg where route_id = @RouteId order by id desc";
+                DataTable dt = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@RouteId", route_id }
+                });
                 if (dt != null)
                 {
                     if (dt.Rows.Count > 0)
@@ -1164,12 +1216,15 @@ where bsmb.bs_user_id = '" + parent_id + @"'
                 }
 
                 // STEP 1: Get sys_user_id for this service
-                string schoolQuery = $@"
+                string schoolQuery = @"
             SELECT TOP 1 sys_user_id 
             FROM services 
-            WHERE id = '{service_id}'";
+            WHERE id = @ServiceId";
 
-                DataTable schDT = _sql_qury_execution.DML_Select(schoolQuery);
+                DataTable schDT = _sql_qury_execution.DML_Select(schoolQuery, new Dictionary<string, object>
+                {
+                    { "@ServiceId", service_id }
+                });
 
                 string sys_userid = (schDT != null && schDT.Rows.Count > 0)
                                     ? schDT.Rows[0]["sys_user_id"].ToString()
@@ -1181,7 +1236,7 @@ where bsmb.bs_user_id = '" + parent_id + @"'
                 // Direct Newtrack school special case
                 if (sys_userid == "3094")
                 {
-                    querytogetlivedata = $@"
+                    querytogetlivedata = @"
                 select id, sys_proc_time as server_time, gps_time, gps_latitude,
                 gps_longitude, CASE 
         WHEN sys_proc_time < DATEADD(MINUTE, -10, GETDATE()) 
@@ -1189,14 +1244,17 @@ where bsmb.bs_user_id = '" + parent_id + @"'
         ELSE gps_speed
     END AS gps_speed, latitude_direction, longitude_direction, battery_voltage
                 from latest_telemetry 
-                where sys_service_id = '{service_id}'";
+                where sys_service_id = @ServiceId";
 
-                    dt = _sql_qury_execution.DML_Select(querytogetlivedata);
+                    dt = _sql_qury_execution.DML_Select(querytogetlivedata, new Dictionary<string, object>
+                    {
+                        { "@ServiceId", service_id }
+                    });
                 }
                 else if (database == "atltracking")
                 {
                     // 1st TRY → ATL
-                    querytogetlivedata = $@"
+                    querytogetlivedata = @"
                 select id, sys_proc_time as server_time, gps_time, gps_latitude,
                 gps_longitude, CASE 
         WHEN sys_proc_time < DATEADD(MINUTE, -10, GETDATE()) 
@@ -1204,14 +1262,17 @@ where bsmb.bs_user_id = '" + parent_id + @"'
         ELSE gps_speed
     END AS gps_speed, latitude_direction, longitude_direction, battery_voltage
                 from atltracking.dbo.tbl_latest_telemetry 
-                where sys_service_id = '{service_id}'";
+                where sys_service_id = @ServiceId";
 
-                    dt = _sql_qury_execution.DML_Select(querytogetlivedata);
+                    dt = _sql_qury_execution.DML_Select(querytogetlivedata, new Dictionary<string, object>
+                    {
+                        { "@ServiceId", service_id }
+                    });
 
                     // FALLBACK to NEWTRACK
                     if (dt == null || dt.Rows.Count == 0)
                     {
-                        querytogetlivedata = $@"
+                        querytogetlivedata = @"
                     select id, sys_proc_time as server_time, gps_time, gps_latitude,
                     gps_longitude, CASE 
         WHEN sys_proc_time < DATEADD(MINUTE, -10, GETDATE()) 
@@ -1219,9 +1280,12 @@ where bsmb.bs_user_id = '" + parent_id + @"'
         ELSE gps_speed
     END AS gps_speed, latitude_direction, longitude_direction, battery_voltage
                     from newtrack.dbo.latest_telemetry 
-                    where sys_service_id = '{service_id}'";
+                    where sys_service_id = @ServiceId";
 
-                        dt = _sql_qury_execution.DML_Select(querytogetlivedata);
+                        dt = _sql_qury_execution.DML_Select(querytogetlivedata, new Dictionary<string, object>
+                        {
+                            { "@ServiceId", service_id }
+                        });
                     }
                 }
 
@@ -1299,7 +1363,7 @@ where bsmb.bs_user_id = '" + parent_id + @"'
         //            sys_userid = schDT.Rows[0]["sys_user_id"].ToString();
         //        }
 
-        //        string querytogetlivedata = $"";
+        //        string querytogetlivedata = "";
         //        DataTable dt = null;
 
         //        if (sys_userid == "5415")
@@ -1409,14 +1473,22 @@ where bsmb.bs_user_id = '" + parent_id + @"'
 
                 if (parent_id != "" && newpassword != "" && currentpassword != "")
                 {
-                    string checkuser = $"select * from bs_user_master where id = {parent_id}";
-                    DataTable data = _sql_qury_execution.DML_Select(checkuser);
+                    string checkuser = "select * from bs_user_master where id = @ParentId";
+                    DataTable data = _sql_qury_execution.DML_Select(checkuser, new Dictionary<string, object>
+                    {
+                        { "@ParentId", parent_id }
+                    });
                     if (data != null)
                     {
                         if (data.Rows.Count > 0)
                         {
-                            string query = $"update bs_user_master set bs_password = '{newpassword}' where id = {parent_id} and bs_password = '{currentpassword}'";
-                            int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                            string query = "update bs_user_master set bs_password = @NewPassword where id = @ParentId and bs_password = @CurrentPassword";
+                            int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query, new Dictionary<string, object>
+                            {
+                                { "@ParentId", parent_id },
+                                { "@NewPassword", newpassword },
+                                { "@CurrentPassword", currentpassword }
+                            });
                             if (rowaffected > 0)
                             {
                                 api_response_app_variables arav1 = new api_response_app_variables
@@ -1498,8 +1570,11 @@ where bsmb.bs_user_id = '" + parent_id + @"'
         {
             try
             {
-                string query = $"select id,user_stop_name,stop_order,status from bs_stop_master where route_id = {route_id} order by stop_order";
-                DataTable dt = _sql_qury_execution.DML_Select(query);
+                string query = "select id,user_stop_name,stop_order,status from bs_stop_master where route_id = @RouteId order by stop_order";
+                DataTable dt = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@RouteId", route_id }
+                });
                 if (dt != null)
                 {
                     if (dt.Rows.Count > 0)
@@ -1608,8 +1683,11 @@ where bsmb.bs_user_id = '" + parent_id + @"'
                 general gen = new general();
                 if (email.Contains("@"))
                 {
-                    string query_To_check_presence = $"select bsmb.email,bum.contact_no,bum.id  from bs_user_master  bum inner join bs_student_master_backup bsmb on bum.bs_user_name = bsmb.mobile_no1 where bsmb.email='{email}'";
-                    DataTable dt = _sql_qury_execution.DML_Select(query_To_check_presence);
+                    string query_To_check_presence = "select bsmb.email,bum.contact_no,bum.id  from bs_user_master  bum inner join bs_student_master_backup bsmb on bum.bs_user_name = bsmb.mobile_no1 where bsmb.email=@Email";
+                    DataTable dt = _sql_qury_execution.DML_Select(query_To_check_presence, new Dictionary<string, object>
+                    {
+                        { "@Email", email }
+                    });
                     if (dt != null)
                     {
                         if (dt.Rows.Count > 0)
@@ -1678,8 +1756,11 @@ where bsmb.bs_user_id = '" + parent_id + @"'
 
             try
             {
-                string query = $"select from_date,to_date,description from bs_holidays where sys_user_id = {schoolid}";
-                DataTable dt = _sql_qury_execution.DML_Select(query);
+                string query = "select from_date,to_date,description from bs_holidays where sys_user_id = @SchoolId";
+                DataTable dt = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@SchoolId", schoolid }
+                });
                 if (dt != null)
                 {
                     if (dt.Rows.Count > 0)
@@ -1777,11 +1858,14 @@ where bsmb.bs_user_id = '" + parent_id + @"'
                 string clearLoginLogQuery = $@"
             UPDATE bs_parent_login_log
             SET fcm = ''
-            WHERE bs_user_id = {parentid}
+            WHERE bs_user_id = @ParentId
               AND CAST(fcm AS VARCHAR(MAX)) = '{FCM.Replace("'", "''")}'";
 
                 _sql_qury_execution
-                    .DML_Insert_Update_Delete(clearLoginLogQuery);
+                    .DML_Insert_Update_Delete(clearLoginLogQuery, new Dictionary<string, object>
+                    {
+                        { "@ParentId", parentid }
+                    });
 
                 /*
                  * Step 2:
@@ -1806,10 +1890,13 @@ where bsmb.bs_user_id = '" + parent_id + @"'
                            THEN ''
                            ELSE iuid
                        END
-            WHERE id = {parentid}";
+            WHERE id = @ParentId";
 
                 int affectedRows = _sql_qury_execution
-                    .DML_Insert_Update_Delete(clearUserTokenQuery);
+                    .DML_Insert_Update_Delete(clearUserTokenQuery, new Dictionary<string, object>
+                    {
+                        { "@ParentId", parentid }
+                    });
 
                 return Content(
                     JsonConvert.SerializeObject(
@@ -1994,8 +2081,11 @@ where bsmb.bs_user_id = '" + parent_id + @"'
 
             try
             {
-                string query = $"select eta from bs_stop_master where id = '{stopid}'";
-                DataTable dt = _sql_qury_execution.DML_Select(query);
+                string query = "select eta from bs_stop_master where id = @StopId";
+                DataTable dt = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@StopId", stopid }
+                });
                 if (dt != null)
                 {
                     if (dt.Rows.Count > 0)
@@ -2052,8 +2142,11 @@ where bsmb.bs_user_id = '" + parent_id + @"'
             {
                 if (!String.IsNullOrEmpty(schoolid))
                 {
-                    string getholidays = $@"SELECT * FROM bs_holidays WHERE sys_user_id = '{schoolid}'";
-                    DataTable dataTable = _sql_qury_execution.DML_Select(getholidays);
+                    string getholidays = @"SELECT * FROM bs_holidays WHERE sys_user_id = @SchoolId";
+                    DataTable dataTable = _sql_qury_execution.DML_Select(getholidays, new Dictionary<string, object>
+                    {
+                        { "@SchoolId", schoolid }
+                    });
 
                     if (dataTable != null && dataTable.Rows.Count > 0)
                     {
@@ -2080,8 +2173,8 @@ where bsmb.bs_user_id = '" + parent_id + @"'
                 {
                     string FROM = from.ToString("yyyy-MM-dd");
                     string TO = To.ToString("yyyy-MM-dd");
-                    string getattendance = $@"DECLARE @FromDate DATE = '{FROM}';
-DECLARE @ToDate DATE = '{TO}';
+                    string getattendance = @"DECLARE @FromDate DATE = @FromDateParam;
+DECLARE @ToDate DATE = @ToDateParam;
 
 WITH Dates AS
 (
@@ -2113,9 +2206,9 @@ LEFT JOIN rf_punch_history r
     ON r.student_id = bs.id
     AND CAST(r.sys_proc_time AS DATE) = d.AttendanceDate
 
-WHERE bs.sys_user_id = {schoolid}
-  AND bs.bs_user_id = {parentid}
-  AND bs.id = {studentid}
+WHERE bs.sys_user_id = @SchoolId
+  AND bs.bs_user_id = @ParentId
+  AND bs.id = @StudentId
 
 GROUP BY
     bs.student_name,
@@ -2131,7 +2224,14 @@ OPTION (MAXRECURSION 366);";
                     {
                         return BadRequest(new { message = "Invalid date range" });
                     }
-                    DataTable dataTable = _sql_qury_execution.DML_Select(getattendance);
+                    DataTable dataTable = _sql_qury_execution.DML_Select(getattendance, new Dictionary<string, object>
+                    {
+                        { "@FromDateParam", FROM },
+                        { "@ToDateParam", TO },
+                        { "@SchoolId", schoolid },
+                        { "@ParentId", parentid },
+                        { "@StudentId", studentid }
+                    });
 
                     if (dataTable != null && dataTable.Rows.Count > 0)
                     {
@@ -2157,9 +2257,9 @@ OPTION (MAXRECURSION 366);";
             {
                 if (!String.IsNullOrEmpty(schoolid) && !String.IsNullOrEmpty(parent_id))
                 {
-                    string query = $@"
-DECLARE @SchoolId INT = {schoolid};
-DECLARE @ParentId INT = {parent_id};
+                    string query = @"
+DECLARE @SchoolId INT = @SchoolIdParam;
+DECLARE @ParentId INT = @ParentIdParam;
 
 SELECT
     bs.student_name AS StudentName,
@@ -2188,7 +2288,11 @@ WHERE bs.sys_user_id = @SchoolId
 
 ORDER BY bs.student_name;
 ";
-                    DataTable dataTable = _sql_qury_execution.DML_Select(query);
+                    DataTable dataTable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@SchoolIdParam", schoolid },
+                        { "@ParentIdParam", parent_id }
+                    });
 
                     if (dataTable != null && dataTable.Rows.Count > 0)
                     {
@@ -2234,7 +2338,7 @@ ORDER BY bs.student_name;
             FROM {monthlyTableName} t
             INNER JOIN bs_route_master r
                 ON r.sys_service_id = t.sys_service_id
-            WHERE r.id = {route_id}
+            WHERE r.id = @RouteId
               AND t.i2 = 1
               AND CAST(t.sys_proc_time AS DATE) = CAST(GETDATE() AS DATE)
               AND CAST(t.sys_proc_time AS TIME) >= r.start_time_up
@@ -2242,7 +2346,10 @@ ORDER BY bs.student_name;
               AND CAST(t.sys_proc_time AS TIME) <= CAST(GETDATE() AS TIME)
             ORDER BY t.sys_proc_time;";
 
-                DataTable dt = _sql_qury_execution.DML_Select(query);
+                DataTable dt = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@RouteId", route_id }
+                });
 
                 if (dt.Rows.Count == 0)
                 {
@@ -2300,20 +2407,29 @@ ORDER BY bs.student_name;
 
                 if (parent_id != "" && reason != "" && leave_date != DateTime.MinValue && student_id != "" && leave_date >= DateTime.Now)
                 {
-                    string checkuser = $@"SELECT *
+                    string checkuser = @"SELECT *
 FROM bs_student_master_backup
-WHERE id = {student_id}
-  AND bs_user_id = {parent_id};";
-                    DataTable data = _sql_qury_execution.DML_Select(checkuser);
+WHERE id = @StudentId
+  AND bs_user_id = @ParentId;";
+                    DataTable data = _sql_qury_execution.DML_Select(checkuser, new Dictionary<string, object>
+                    {
+                        { "@StudentId", student_id },
+                        { "@ParentId", parent_id }
+                    });
                     if (data != null)
                     {
                         if (data.Rows.Count > 0)
                         {
-                            string query = $@"INSERT INTO bs_leave_master
+                            string query = @"INSERT INTO bs_leave_master
                   ( reason, applied_date, is_approved, applied_on, student_id)
                   VALUES
-                  ('{reason}', '{leave_date:yyyy-MM-dd HH:mm:ss}', 0, GETDATE(), '{student_id}')";
-                            int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                  (@Reason, @LeaveDate, 0, GETDATE(), @StudentId)";
+                            int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query, new Dictionary<string, object>
+                            {
+                                { "@StudentId", student_id },
+                                { "@Reason", reason },
+                                { "@LeaveDate", leave_date }
+                            });
                             if (rowaffected > 0)
                             {
                                 api_app_leave_request arav1 = new api_app_leave_request
@@ -2396,20 +2512,26 @@ WHERE id = {student_id}
 
                 if (parent_id != "")
                 {
-                    string checkuser = $"select * from bs_user_master where id = {parent_id}";
-                    DataTable data = _sql_qury_execution.DML_Select(checkuser);
+                    string checkuser = "select * from bs_user_master where id = @ParentId";
+                    DataTable data = _sql_qury_execution.DML_Select(checkuser, new Dictionary<string, object>
+                    {
+                        { "@ParentId", parent_id }
+                    });
                     if (data != null && data.Rows.Count > 0)
                     {
                   
-                            string query = $@"SELECT 
+                            string query = @"SELECT 
     lm.*,
     sm.student_name
 FROM bs_leave_master lm
 INNER JOIN bs_student_master_backup sm
     ON sm.id = lm.student_id
-WHERE sm.parent_id = {parent_id}
+WHERE sm.parent_id = @ParentId
 ORDER BY lm.applied_on DESC;";
-                            DataTable dt = _sql_qury_execution.DML_Select(query);
+                            DataTable dt = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                            {
+                                { "@ParentId", parent_id }
+                            });
 
                         if (dt != null && dt.Rows.Count > 0)
                         {

@@ -41,8 +41,11 @@ namespace SchoolBuddy_APIs.Controllers
                 string json = "";
                 if (user_id != null)
                 {
-                    string query = $"select count(*) from bs_student_master_backup where sys_user_id = '{user_id}'";
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    string query = "select count(*) from bs_student_master_backup where sys_user_id = @UserId";
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -78,7 +81,7 @@ namespace SchoolBuddy_APIs.Controllers
         {
             try
             {
-                string query = $@"
+                string query = @"
 SELECT COUNT(DISTINCT bsmb.id) AS total_students
 FROM bs_student_master_backup bsmb
 
@@ -91,8 +94,11 @@ INNER JOIN bs_route_master brm
 INNER JOIN bs_class_master bcm
     ON bcm.id = bsmb.class
 
-WHERE bsmb.sys_user_id = {getallstudents.user_id}";
-                DataTable datatable = _sql_qury_execution.DML_Select(query);
+WHERE bsmb.sys_user_id = @UserId";
+                DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@UserId", getallstudents.user_id }
+                });
                 if (datatable != null)
                 {
                     if (datatable.Rows.Count > 0)
@@ -131,8 +137,11 @@ WHERE bsmb.sys_user_id = {getallstudents.user_id}";
                 string json = "";
                 if (user_id != null)
                 {
-                    string query = $"select count(*) from bs_route_master where sys_user_id = {user_id}";
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    string query = "select count(*) from bs_route_master where sys_user_id = @UserId";
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -176,11 +185,11 @@ WHERE bsmb.sys_user_id = {getallstudents.user_id}";
                     return 0;
                 }
 
-                string query = $@"
+                string query = @"
             SELECT COUNT(*) 
             FROM [atltracking].[dbo].tbl_services s
             INNER JOIN [atltracking].[dbo].tbl_devices d ON d.id = s.sys_device_id
-            WHERE s.sys_user_id = {user_id}";
+            WHERE s.sys_user_id = @UserId";
 
             //    string query1 = $@"
             //SELECT COUNT(*) 
@@ -189,7 +198,10 @@ WHERE bsmb.sys_user_id = {getallstudents.user_id}";
             //WHERE s.sys_user_id = {user_id}";
 
                 // Execute the queries
-                DataTable datatable = _sql_qury_execution.DML_Select(query);
+                DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@UserId", user_id }
+                });
                 //DataTable datatable1 = _sql_qury_execution.DML_Select(query1);
 
                 // Initialize count variables
@@ -311,8 +323,11 @@ WHERE bsmb.sys_user_id = {getallstudents.user_id}";
                 string json = "";
                 if (user_id != null)
                 {
-                    string query = $"select count(*) from bs_notification_parent where parent_id in (select id from bs_user_master where sys_user_id = {user_id})";
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    string query = "select count(*) from bs_notification_parent where parent_id in (select id from bs_user_master where sys_user_id = @UserId)";
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -384,7 +399,7 @@ WHERE bsmb.sys_user_id = {getallstudents.user_id}";
                     //                    bsmb.sys_user_id = {user_id}
                     //                    AND bnp.date_time > CONVERT(DATETIME, '{DateTime.Now.AddDays(-1).ToString("MMM d yyyy h:mmtt")}', 100);";
 
-                    string query = $@"SELECT 
+                    string query = @"SELECT 
                                         count(*)
                                     FROM 
                                         bs_student_master_backup bsmb
@@ -393,10 +408,13 @@ WHERE bsmb.sys_user_id = {getallstudents.user_id}";
                                     INNER JOIN 
                                         bs_notification_parent bnp ON bnp.parent_id = bs_user_master.id
                                     WHERE 
-                                        bsmb.sys_user_id = '{user_id}'
+                                        bsmb.sys_user_id = @UserId
                                         AND bnp.date_time >= CONVERT(DATETIME, CAST(GETDATE() AS DATE), 101) 
                                         AND bnp.date_time <= GETDATE(); ";
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -454,21 +472,21 @@ WHERE bsmb.sys_user_id = {getallstudents.user_id}";
                     if (database == "newtrack")
                     {
                         // newtrack database uses 'services' and 'devices' directly
-                        query = $@"select count(*)from latest_telemetry lt
+                        query = @"select count(*)from latest_telemetry lt
                                         inner join 
                                         services 
                                         on services.id = lt.sys_service_id
-                                        where services.sys_user_id = {user_id}
+                                        where services.sys_user_id = @UserId
                                         and lt.gps_speed >0 and CAST(lt.sys_proc_time AS DATE) = CAST(GETDATE() AS DATE);";
                     }
                     else if (database == "atltracking")
                     {
                         // atltracking database uses 'tbl_services' and 'tbl_devices', but references bs_route_master from newtrack
-                        query = $@" select count(*)from atltracking.dbo.tbl_latest_telemetry lt
+                        query = @" select count(*)from atltracking.dbo.tbl_latest_telemetry lt
                                          inner join 
                                          atltracking.dbo.tbl_services s
                                          on s.id = lt.sys_service_id
-                                         where s.sys_user_id = {user_id}
+                                         where s.sys_user_id = @UserId
                                          and lt.gps_speed >0 and CAST(lt.sys_proc_time AS DATE) = CAST(GETDATE() AS DATE);";
                     }
                     else
@@ -476,7 +494,10 @@ WHERE bsmb.sys_user_id = {getallstudents.user_id}";
                         return 0;
                     }
 
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -525,7 +546,7 @@ WHERE bsmb.sys_user_id = {getallstudents.user_id}";
                     int? page = dashboard.page;
                     int? pageSize = dashboard.pageSize;
                     int? offset = (page - 1) * pageSize;
-                    string query = $@"select bsmb.student_name,bsmb.admission_no,bsmb.mobile_no1
+                    string query = @"select bsmb.student_name,bsmb.admission_no,bsmb.mobile_no1
                                     ,bs_route_master.route_name,bnp.message,bnp.date_time from bs_student_master_backup bsmb
                                     inner join 
                                     bs_route_students brs
@@ -538,11 +559,16 @@ WHERE bsmb.sys_user_id = {getallstudents.user_id}";
                                     inner join 
                                     bs_notification_parent bnp
                                     on bnp.parent_id  = bs_user_master.id
-                                    where bsmb.sys_user_id = {user_id}
+                                    where bsmb.sys_user_id = @UserId
  ORDER BY bnp.date_time DESC
-OFFSET {offset} ROWS
-FETCH NEXT {pageSize} ROWS ONLY";
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+OFFSET @Offset ROWS
+FETCH NEXT @PageSize ROWS ONLY";
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id },
+                        { "@Offset", offset },
+                        { "@PageSize", pageSize }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -608,7 +634,7 @@ FETCH NEXT {pageSize} ROWS ONLY";
 
 
 
-                    string query = $@"SELECT
+                    string query = @"SELECT
                                         bsmb.student_name,
                                         bsmb.father_name,
                                         bcm.class_name,
@@ -623,7 +649,7 @@ FETCH NEXT {pageSize} ROWS ONLY";
                                         ON brm.id = brs.route_id
                                     INNER JOIN bs_class_master bcm
                                         ON bcm.id = bsmb.class
-                                    WHERE bsmb.sys_user_id = {user_id}
+                                    WHERE bsmb.sys_user_id = @UserId
                                     GROUP BY
                                         bsmb.student_name,
                                         bsmb.father_name,
@@ -632,7 +658,10 @@ FETCH NEXT {pageSize} ROWS ONLY";
                                         bsmb.rf_id,
                                         bsmb.admission_no;
                                     ";
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -760,7 +789,7 @@ FETCH NEXT {pageSize} ROWS ONLY";
                     if (database == "newtrack")
                     {
                         // newtrack database uses 'services' and 'devices' directly
-                        query = $@"
+                        query = @"
               SELECT
     s.veh_reg,
     d.imei,
@@ -800,7 +829,7 @@ LEFT JOIN bs_route_master brm
 LEFT JOIN latest_telemetry lt
     ON lt.sys_service_id = s.id
 
-WHERE s.sys_user_id = {user_id}
+WHERE s.sys_user_id = @UserId
 
 ORDER BY
     CASE
@@ -817,7 +846,7 @@ ORDER BY
                     else if (database == "atltracking")
                     {
                         // atltracking database uses 'tbl_services' and 'tbl_devices', but references bs_route_master from newtrack
-                        query = $@"
+                        query = @"
                     SELECT
     s.id AS sys_service_id,
     s.veh_reg,
@@ -856,7 +885,7 @@ LEFT JOIN bs_route_master brm
 LEFT JOIN atltracking.dbo.tbl_latest_telemetry lt
     ON lt.sys_service_id = s.id
 
-WHERE s.sys_user_id = {user_id}
+WHERE s.sys_user_id = @UserId
 
 ORDER BY s.veh_reg;";
                     }
@@ -865,7 +894,10 @@ ORDER BY s.veh_reg;";
                         return Content("{\"error\":\"Unsupported database type\"}", "application/json");
                     }
 
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
 
                     if (datatable != null && datatable.Rows.Count > 0)
                     {
@@ -929,7 +961,7 @@ ORDER BY s.veh_reg;";
                     if (database == "newtrack")
                     {
                         // newtrack database uses 'services' and 'devices' directly
-                        query = $@"select d.imei,services.veh_reg,lt.gps_time ,lt.gps_latitude,lt.gps_longitude,
+                        query = @"select d.imei,services.veh_reg,lt.gps_time ,lt.gps_latitude,lt.gps_longitude,
                                         lt.gps_speed,lt.firmware_version,lt.i2,lt.battery_voltage,
                                         lt.signal_strength from latest_telemetry lt
                                         inner join 
@@ -938,13 +970,13 @@ ORDER BY s.veh_reg;";
 										inner join
 										devices d
 										on services.sys_device_id = d.id
-                                        where services.sys_user_id = {user_id}
+                                        where services.sys_user_id = @UserId
                                         and lt.gps_speed >0  AND CAST(lt.sys_proc_time AS DATE) = CAST(GETDATE() AS DATE);";
                     }
                     else if (database == "atltracking")
                     {
                         // atltracking database uses 'tbl_services' and 'tbl_devices', but references bs_route_master from newtrack
-                        query = $@"select d.imei,s.veh_reg,lt.gps_time ,lt.gps_latitude,lt.gps_longitude,
+                        query = @"select d.imei,s.veh_reg,lt.gps_time ,lt.gps_latitude,lt.gps_longitude,
                                         lt.gps_speed,lt.firmware_version,lt.i2,lt.battery_voltage,
                                         lt.signal_strength from atltracking.dbo.tbl_latest_telemetry lt
                                         left join 
@@ -953,7 +985,7 @@ ORDER BY s.veh_reg;";
 										left join
 										atltracking.dbo.tbl_devices d
 										on s.sys_device_id = d.id
-                                        where s.sys_user_id = {user_id}
+                                        where s.sys_user_id = @UserId
                                         and lt.gps_speed >0 and
                                          CAST(lt.sys_proc_time AS DATE) = CAST(GETDATE() AS DATE);";
                     }
@@ -962,7 +994,10 @@ ORDER BY s.veh_reg;";
                         return Content("{\"error\":\"Unsupported database type\"}", "application/json");
                     }
 
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -1015,13 +1050,16 @@ ORDER BY s.veh_reg;";
 
                 if (user_id != null)
                 {
-                    string query = $@"select count(*) from latest_telemetry lt
+                    string query = @"select count(*) from latest_telemetry lt
                                         inner join 
                                         services 
                                         on services.id = lt.sys_service_id
-                                        where services.sys_user_id = {user_id}
+                                        where services.sys_user_id = @UserId
                                         and lt.gps_speed =0 and lt.i2 = 0";
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -1068,13 +1106,16 @@ ORDER BY s.veh_reg;";
 
                 if (user_id != null)
                 {
-                    string query = $@"select count(*) from latest_telemetry lt
+                    string query = @"select count(*) from latest_telemetry lt
                                         inner join 
                                         services 
                                         on services.id = lt.sys_service_id
-                                        where services.sys_user_id = {user_id}
+                                        where services.sys_user_id = @UserId
                                         and lt.gps_speed =0 and lt.i2 = 1";
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -1160,7 +1201,7 @@ ORDER BY s.veh_reg;";
                     //                bsmb.sys_user_id = {user_id}
                     //                AND bnp.date_time >= CONVERT(DATETIME, CAST(GETDATE() AS DATE), 101) 
                     //                AND bnp.date_time <= GETDATE(); ";
-                    string query = $@"SELECT 
+                    string query = @"SELECT 
                                         bsmb.student_name, 
                                         bsmb.admission_no, 
                                         bsmb.mobile_no1, 
@@ -1173,10 +1214,13 @@ ORDER BY s.veh_reg;";
                                     INNER JOIN 
                                         bs_notification_parent bnp ON bnp.parent_id = bum.id AND bnp.student_id = bsmb.id
                                     WHERE 
-                                        bsmb.sys_user_id = {user_id} 
+                                        bsmb.sys_user_id = @UserId 
                                         AND bnp.date_time >= CONVERT(DATETIME, CAST(GETDATE() AS DATE), 101) 
                                         AND bnp.date_time <= GETDATE();";
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
 
 
 
@@ -1228,11 +1272,14 @@ ORDER BY s.veh_reg;";
             {
                 if (!String.IsNullOrEmpty(dashboard.user_id))
                 {
-                    string getholidays = $@"SELECT * 
+                    string getholidays = @"SELECT * 
                                             FROM bs_holidays 
                                             WHERE type = 0 
-                                            AND from_date > CAST(GETDATE() AS DATE) and sys_user_id = {dashboard.user_id};";
-                    DataTable dataTable = _sql_qury_execution.DML_Select(getholidays);
+                                            AND from_date > CAST(GETDATE() AS DATE) and sys_user_id = @UserId;";
+                    DataTable dataTable = _sql_qury_execution.DML_Select(getholidays, new Dictionary<string, object>
+                    {
+                        { "@UserId", dashboard.user_id }
+                    });
                     if (dataTable != null)
                     {
                         if (dataTable.Rows.Count >= 0)
@@ -1271,11 +1318,14 @@ ORDER BY s.veh_reg;";
             {
                 if (!String.IsNullOrEmpty(dashboard.user_id))
                 {
-                    string getholidays = $@"SELECT * 
+                    string getholidays = @"SELECT * 
                                             FROM bs_holidays 
                                             WHERE type = 1
-                                            AND from_date > CAST(GETDATE() AS DATE) and sys_user_id = {dashboard.user_id};";
-                    DataTable dataTable = _sql_qury_execution.DML_Select(getholidays);
+                                            AND from_date > CAST(GETDATE() AS DATE) and sys_user_id = @UserId;";
+                    DataTable dataTable = _sql_qury_execution.DML_Select(getholidays, new Dictionary<string, object>
+                    {
+                        { "@UserId", dashboard.user_id }
+                    });
                     if (dataTable != null)
                     {
                         if (dataTable.Rows.Count >= 0)
@@ -1524,10 +1574,10 @@ ORDER BY s.veh_reg;";
                 string from = fromDateTime.ToString("yyyy-MM-dd HH:mm:ss");
                 string to = toDateTime.ToString("yyyy-MM-dd HH:mm:ss");
 
-                string query = $@"
-DECLARE @UserId INT = {userId};
-DECLARE @FromDateTime DATETIME = '{from}';
-DECLARE @ToDateTime DATETIME = '{to}';
+                string query = @"
+DECLARE @UserId INT = @UserIdParam;
+DECLARE @FromDateTime DATETIME = @FromDateTimeParam;
+DECLARE @ToDateTime DATETIME = @ToDateTimeParam;
 
 
 ;WITH RouteCandidates AS
@@ -1774,7 +1824,12 @@ ORDER BY
 ";
 
                 DataTable dataTable =
-                    _sql_qury_execution.DML_Select(query);
+                    _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserIdParam", userId },
+                        { "@FromDateTimeParam", from },
+                        { "@ToDateTimeParam", to }
+                    });
 
                 if (dataTable == null)
                 {
@@ -1833,7 +1888,7 @@ ORDER BY
 
                 var driverList = new List<DriverPerformanceModel>();
 
-                string query = $@"
+                string query = @"
            SELECT
     dm.name AS DriverName,
     s.veh_reg AS BusName,
@@ -1869,11 +1924,15 @@ LEFT JOIN [atltracking].[dbo].[tbl_services] s
 LEFT JOIN [atltracking].[dbo].[tbl_latest_telemetry] lt
     ON lt.sys_service_id = s.id
 
-WHERE u.sys_username = '{username}'
-  AND u.sys_password = '{password}';";
+WHERE u.sys_username = @Username
+  AND u.sys_password = @Password;";
 
                 DataTable dataTable =
-                    _sql_qury_execution.DML_Select(query);
+                    _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@Username", username },
+                        { "@Password", password }
+                    });
 
                 if (dataTable != null && dataTable.Rows.Count > 0)
                 {
@@ -2367,7 +2426,7 @@ DECLARE @CurrentTime TIME = CAST(GETDATE() AS TIME);
 
     ) LatestTelemetry
 
-    WHERE brm.sys_user_id = {userId}
+    WHERE brm.sys_user_id = @UserId
 )
 
 SELECT
@@ -2429,7 +2488,10 @@ ORDER BY
     Route ASC;";
 
                 DataTable dataTable =
-                    _sql_qury_execution.DML_Select(query);
+                    _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", userId }
+                    });
 
                 if (dataTable == null)
                 {
@@ -2524,7 +2586,7 @@ ORDER BY
                 }
 
                 string query = $@"
-DECLARE @SysUserId INT = {dashboard.user_id};
+DECLARE @SysUserId INT = @SysUserIdParam;
 
 SELECT
     s.id AS sys_service_id,
@@ -2551,7 +2613,10 @@ ORDER BY
     LastRunningTime DESC;";
 
                 DataTable dataTable =
-                    _sql_qury_execution.DML_Select(query);
+                    _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@SysUserIdParam", dashboard.user_id }
+                    });
 
                 if (dataTable == null)
                 {

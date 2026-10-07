@@ -57,10 +57,16 @@ namespace SchoolBuddy_APIs.Controllers
                     return BadRequest(new { status = "0", msg = "Invalid input" });
                 }
 
-                string query = $"INSERT INTO bs_parent_complaint (complaint_id, bs_user_id, description, raised_on, is_active) " +
-                               $"VALUES ('{request.ComplaintId}', '{request.BsUserId}', '{request.Description}', '{DateTime.Now:yyyy-MM-dd HH:mm:ss}', 1)";
+                string query = "INSERT INTO bs_parent_complaint (complaint_id, bs_user_id, description, raised_on, is_active) " +
+                               "VALUES (@ComplaintId, @BsUserId, @Description, @RaisedOn, 1)";
 
-                int rowsAffected = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                int rowsAffected = _sql_qury_execution.DML_Insert_Update_Delete(query, new Dictionary<string, object>
+                {
+                    { "@ComplaintId", request.ComplaintId },
+                    { "@BsUserId", request.BsUserId },
+                    { "@Description", request.Description },
+                    { "@RaisedOn", DateTime.Now }
+                });
 
                 if (rowsAffected > 0)
                 {
@@ -110,9 +116,12 @@ namespace SchoolBuddy_APIs.Controllers
                                         inner join bs_route_students rs on 
                                         rs.student_id = s.id inner join bs_route_master r on r.id = rs.route_id 
                                         inner join tbl_users u on u.id = r.sys_user_id
-                                        inner join bs_complaint_master c on c.id=p.complaint_id  where p.is_active = 1 and u.id = " + user_id + " order by p.id";
+                                        inner join bs_complaint_master c on c.id=p.complaint_id  where p.is_active = 1 and u.id = @UserId order by p.id";
 
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -160,6 +169,11 @@ namespace SchoolBuddy_APIs.Controllers
                 {
                     return Content("0");
                 }
+
+                var userParams = new Dictionary<string, object>
+                {
+                    { "@UserId", user_id }
+                };
 
 
                 string query = @"
@@ -215,7 +229,7 @@ namespace SchoolBuddy_APIs.Controllers
 
             WHERE
                 p.is_active = 1
-                AND u.id = " + user_id + @"
+                AND u.id = @UserId
 
             GROUP BY
                 p.id,
@@ -234,7 +248,7 @@ namespace SchoolBuddy_APIs.Controllers
         ";
 
                 DataTable datatable =
-                    _sql_qury_execution.DML_Select(query);
+                    _sql_qury_execution.DML_Select(query, userParams);
 
 
                 // =========================================================
@@ -281,11 +295,11 @@ namespace SchoolBuddy_APIs.Controllers
                 ON u.id = r.sys_user_id
 
             WHERE
-                u.id = " + user_id + @";
+                u.id = @UserId;
         ";
 
                 DataTable summaryTable =
-                    _sql_qury_execution.DML_Select(summaryQuery);
+                    _sql_qury_execution.DML_Select(summaryQuery, userParams);
 
 
                 // =========================================================
@@ -365,6 +379,11 @@ namespace SchoolBuddy_APIs.Controllers
                     return Content("0");
                 }
 
+                var userParams = new Dictionary<string, object>
+                {
+                    { "@UserId", user_id }
+                };
+
 
                 string query = @"
     SELECT
@@ -423,7 +442,7 @@ namespace SchoolBuddy_APIs.Controllers
 
     WHERE
         p.is_active = 0
-        AND u.id = " + user_id + @"
+        AND u.id = @UserId
 
     GROUP BY
         p.id,
@@ -443,7 +462,7 @@ namespace SchoolBuddy_APIs.Controllers
 ";
 
                 DataTable datatable =
-                    _sql_qury_execution.DML_Select(query);
+                    _sql_qury_execution.DML_Select(query, userParams);
 
 
                 // =========================================================
@@ -490,11 +509,11 @@ namespace SchoolBuddy_APIs.Controllers
                 ON u.id = r.sys_user_id
 
             WHERE
-                u.id = " + user_id + @";
+                u.id = @UserId;
         ";
 
                 DataTable summaryTable =
-                    _sql_qury_execution.DML_Select(summaryQuery);
+                    _sql_qury_execution.DML_Select(summaryQuery, userParams);
 
 
                 // =========================================================
@@ -580,9 +599,12 @@ namespace SchoolBuddy_APIs.Controllers
                     //string query = $"select name from bs_all_students where user_id = '{user_id}'";
                     string query = @"select  p.*,s.student_name,r.route_name,u.sys_username,c.complaint,s.mobile_no1 from bs_parent_complaint p inner join bs_student_master_backup s on s.bs_user_id= p.bs_user_id inner join bs_route_students rs on 
                          rs.student_id = s.id inner join bs_route_master r on r.id = rs.route_id inner join tbl_users u on u.id = r.sys_user_id
-                         inner join bs_complaint_master c on c.id=p.complaint_id  where p.is_active = 0 and u.id = " + user_id + "  order by p.id";
+                         inner join bs_complaint_master c on c.id=p.complaint_id  where p.is_active = 0 and u.id = @UserId  order by p.id";
 
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -635,9 +657,13 @@ namespace SchoolBuddy_APIs.Controllers
                 if (complain.userid != 0)
                 {
                     //string query = $"select name from bs_all_students where user_id = '{user_id}'";
-                    string query = $@"update bs_parent_complaint set is_active=0 , resolved_on=getDate(),comments='{complain.comment}' where id= {complain.Id}";
+                    string query = @"update bs_parent_complaint set is_active=0 , resolved_on=getDate(),comments=@Comment where id= @Id";
 
-                    int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                    int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query, new Dictionary<string, object>
+                    {
+                        { "@Comment", complain.comment },
+                        { "@Id", complain.Id }
+                    });
                     if (rowaffected > 0)
                     {
                         return true;

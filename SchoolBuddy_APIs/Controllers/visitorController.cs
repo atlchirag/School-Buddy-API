@@ -25,11 +25,14 @@ namespace SchoolBuddy_APIs.Controllers
                 string selectQuery = @"
                 SELECT ISNULL(MAX(CAST(REPLACE(visitor_no, 'Visitor ', '') AS INT)), 0)
                 FROM bs_visitor_master
-                WHERE sys_user_id = " + model.SysUserId + @"
+                WHERE sys_user_id = @SysUserId
                 AND in_time >= CAST(GETDATE() AS DATE)
                 AND in_time < DATEADD(DAY, 1, CAST(GETDATE() AS DATE))";
 
-                DataTable result = _sql_qury_execution.DML_Select(selectQuery);
+                DataTable result = _sql_qury_execution.DML_Select(selectQuery, new Dictionary<string, object>
+                {
+                    { "@SysUserId", model.SysUserId }
+                });
                 int lastNo = 0;
                 if (result.Rows.Count > 0)
                 {
@@ -54,18 +57,28 @@ INSERT INTO bs_visitor_master
 )
 VALUES
 (
-    '" + model.Name + @"',
-    '" + model.MobileNo + @"',
-    " + model.CardId + @",
-    '" + model.CardNo + @"',
-    '" + visitorNo + @"',
-    '" + Convert.ToDateTime(model.in_time).ToString("yyyy-MM-dd HH:mm:ss") + @"',
-    '" + Convert.ToDateTime(model.out_time).ToString("yyyy-MM-dd HH:mm:ss") + @"',
-    " + model.SysUserId + @"
+    @Name,
+    @MobileNo,
+    @CardId,
+    @CardNo,
+    @VisitorNo,
+    @InTime,
+    @OutTime,
+    @SysUserId
 )";
 
 
-                int rowsAffected = _sql_qury_execution.DML_Insert_Update_Delete(insertQuery);
+                int rowsAffected = _sql_qury_execution.DML_Insert_Update_Delete(insertQuery, new Dictionary<string, object>
+                {
+                    { "@Name", model.Name },
+                    { "@MobileNo", model.MobileNo },
+                    { "@CardId", model.CardId },
+                    { "@CardNo", model.CardNo },
+                    { "@VisitorNo", visitorNo },
+                    { "@InTime", model.in_time },
+                    { "@OutTime", model.out_time },
+                    { "@SysUserId", model.SysUserId }
+                });
 
                 if (rowsAffected > 0)
                 {

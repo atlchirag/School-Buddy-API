@@ -47,15 +47,22 @@ namespace SchoolBuddy_APIs.Controllers
                 }
 
                 // Log the query for debugging
-                string query_newtrack = $@"INSERT INTO bs_holidays 
+                string query_newtrack = @"INSERT INTO bs_holidays 
         (sys_user_id, from_date, to_date, description, added_on, type)
         VALUES 
-        ('{holidayData.schoolid}', '{startDate.ToString("yyyy-MM-dd HH:mm:ss")}', '{endDate.ToString("yyyy-MM-dd HH:mm:ss")}', '{holidayData.eventname}', GETDATE(), '{holidayData.status}')";
+        (@SchoolId, @FromDate, @ToDate, @Description, GETDATE(), @Type)";
 
                 Console.WriteLine($"Executing SQL: {query_newtrack}");
 
                 // Execute the SQL query
-                int row_affected = _sql_qury_execution.DML_Insert_Update_Delete(query_newtrack);
+                int row_affected = _sql_qury_execution.DML_Insert_Update_Delete(query_newtrack, new Dictionary<string, object>
+                {
+                    { "@SchoolId", holidayData.schoolid },
+                    { "@FromDate", startDate },
+                    { "@ToDate", endDate },
+                    { "@Description", holidayData.eventname },
+                    { "@Type", holidayData.status }
+                });
 
                 // Log the result of the query
                 if (row_affected > 0)
@@ -134,11 +141,15 @@ namespace SchoolBuddy_APIs.Controllers
                 }
 
                 // ✅ Query fix, ab `sys_user_id` bhi use ho raha hai
-                string query = $@"
+                string query = @"
         DELETE FROM bs_holidays 
-        WHERE id = {holidayData.id} AND sys_user_id = '{holidayData.schoolid}'";
+        WHERE id = @Id AND sys_user_id = @SchoolId";
 
-                int rowsAffected = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                int rowsAffected = _sql_qury_execution.DML_Insert_Update_Delete(query, new Dictionary<string, object>
+                {
+                    { "@Id", holidayData.id },
+                    { "@SchoolId", holidayData.schoolid }
+                });
 
                 if (rowsAffected > 0)
                 {
@@ -163,8 +174,11 @@ namespace SchoolBuddy_APIs.Controllers
             {
                 if (!String.IsNullOrEmpty(school.id))
                 {
-                    string getholidays = $@"SELECT * FROM bs_holidays WHERE sys_user_id = '{school.id}'";
-                    DataTable dataTable = _sql_qury_execution.DML_Select(getholidays);
+                    string getholidays = @"SELECT * FROM bs_holidays WHERE sys_user_id = @SchoolId";
+                    DataTable dataTable = _sql_qury_execution.DML_Select(getholidays, new Dictionary<string, object>
+                    {
+                        { "@SchoolId", school.id }
+                    });
 
                     if (dataTable != null && dataTable.Rows.Count > 0)
                     {

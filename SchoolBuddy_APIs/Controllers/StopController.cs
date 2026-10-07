@@ -32,14 +32,17 @@ namespace SchoolBuddy_APIs.Controllers
                 string json = "";
                 if (stopid != null)
                 {
-                    string query = $@"select bsmb.student_name,bsmb.father_name,
+                    string query = @"select bsmb.student_name,bsmb.father_name,
                                       bsmb.admission_no,bsmb.rf_id,bsmb.mobile_no1 
                                       from bs_student_master_backup bsmb 
                                       inner join bs_route_students brs 
                                       on 
                                       brs.student_id = bsmb.id 
-                                      where brs.stop_id = {stopid}";
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                                      where brs.stop_id = @StopId";
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@StopId", stopid }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -83,10 +86,17 @@ namespace SchoolBuddy_APIs.Controllers
             try
             {
                 #region ADDSTOP QUERY
-                string query = $"Insert into bs_stop_master(user_stop_name,route_id,RFId,msg,stop_order,sys_user_id,latitude,longitude) values ('{stop.Stop_Name}',{stop.route_id},' ',10,(select isnull(max(stop_order),0) +1 from bs_stop_master where route_id={stop.route_id}),{stop.uid},{stop.Latitude},{stop.Longitude});";
+                string query = "Insert into bs_stop_master(user_stop_name,route_id,RFId,msg,stop_order,sys_user_id,latitude,longitude) values (@StopName,@RouteId,' ',10,(select isnull(max(stop_order),0) +1 from bs_stop_master where route_id=@RouteId),@Uid,@Latitude,@Longitude);";
                 #endregion
 
-                int result = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                int result = _sql_qury_execution.DML_Insert_Update_Delete(query, new Dictionary<string, object>
+                {
+                    { "@StopName", stop.Stop_Name },
+                    { "@RouteId", stop.route_id },
+                    { "@Uid", stop.uid },
+                    { "@Latitude", stop.Latitude },
+                    { "@Longitude", stop.Longitude }
+                });
                 if (result > 0)
                 {
                     return true;
@@ -117,10 +127,13 @@ namespace SchoolBuddy_APIs.Controllers
             try
             {
                 #region GETALLSTOPS QUERY
-                string query = $"select id,latitude,longitude,user_stop_name,stop_order, status from bs_stop_master where route_id = {RouteId.route_id} order by stop_order";
+                string query = "select id,latitude,longitude,user_stop_name,stop_order, status from bs_stop_master where route_id = @RouteId order by stop_order";
                 #endregion
 
-                DataTable datatable = _sql_qury_execution.DML_Select(query);
+                DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@RouteId", RouteId.route_id }
+                });
                 if (datatable != null)
                 {
                     if (datatable.Rows.Count > 0)
@@ -151,9 +164,12 @@ namespace SchoolBuddy_APIs.Controllers
             string json = "";
             try
             {
-                string query = $"SELECT id, user_stop_name, route_id, RFId, msg, stop_order, sys_user_id, latitude, longitude FROM bs_stop_master WHERE id = {model.id}";
+                string query = "SELECT id, user_stop_name, route_id, RFId, msg, stop_order, sys_user_id, latitude, longitude FROM bs_stop_master WHERE id = @Id";
 
-                DataTable datatable = _sql_qury_execution.DML_Select(query);
+                DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@Id", model.id }
+                });
                 if (datatable != null && datatable.Rows.Count > 0)
                 {
                     json = JsonConvert.SerializeObject(datatable, Formatting.Indented);
@@ -177,15 +193,21 @@ namespace SchoolBuddy_APIs.Controllers
         {
             try
             {
-                string query = $@"UPDATE bs_stop_master
+                string query = @"UPDATE bs_stop_master
                           SET 
-                              user_stop_name = '{stop.Stop_Name}',
+                              user_stop_name = @StopName,
                              
-                              latitude = {stop.Latitude},
-                              longitude = {stop.Longitude}
-                          WHERE id = {stop.id}";
+                              latitude = @Latitude,
+                              longitude = @Longitude
+                          WHERE id = @Id";
 
-                int result = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                int result = _sql_qury_execution.DML_Insert_Update_Delete(query, new Dictionary<string, object>
+                {
+                    { "@StopName", stop.Stop_Name },
+                    { "@Latitude", stop.Latitude },
+                    { "@Longitude", stop.Longitude },
+                    { "@Id", stop.id }
+                });
                 if (result > 0)
                 {
                     return Content("1");
@@ -216,10 +238,13 @@ namespace SchoolBuddy_APIs.Controllers
             try
             {
                 #region GETALLSTOPS QUERY
-                string query = $"select count(*) from bs_route_students where stop_id = {stop.id}";
+                string query = "select count(*) from bs_route_students where stop_id = @StopId";
                 #endregion
 
-                DataTable datatable = _sql_qury_execution.DML_Select(query);
+                DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@StopId", stop.id }
+                });
                 if (datatable != null)
                 {
                     if (datatable.Rows.Count > 0)
@@ -256,11 +281,15 @@ namespace SchoolBuddy_APIs.Controllers
             try
             {
                 #region DELETE QUERY
-                string query = $"delete from bs_stop_master where id = '{stop.id}' and route_id = '{stop.rid}'";
+                string query = "delete from bs_stop_master where id = @Id and route_id = @RouteId";
 
                 #endregion
 
-                int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query, new Dictionary<string, object>
+                {
+                    { "@Id", stop.id },
+                    { "@RouteId", stop.rid }
+                });
                 if (rowaffected>0)
                 {
                         return true;
@@ -295,16 +324,19 @@ namespace SchoolBuddy_APIs.Controllers
             try
             {
                 #region GETALLSTOPS QUERY
-                string query = $@"select bsm.id,bsmb.student_name,bsmb.rf_id from bs_route_students  brs
+                string query = @"select bsm.id,bsmb.student_name,bsmb.rf_id from bs_route_students  brs
                                     inner join 
                                     bs_stop_master bsm
                                     on bsm.id= brs.stop_id
                                     inner join 
                                     bs_student_master_backup bsmb
-                                    on bsmb.id = brs.student_id where bsm.id = {stop.id}";
+                                    on bsmb.id = brs.student_id where bsm.id = @StopId";
                 #endregion
 
-                DataTable datatable = _sql_qury_execution.DML_Select(query);
+                DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@StopId", stop.id }
+                });
                 if (datatable != null)
                 {
                     if (datatable.Rows.Count > 0)

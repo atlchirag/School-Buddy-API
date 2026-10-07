@@ -20,15 +20,23 @@ namespace SchoolBuddy_APIs.Models.Master.Holidays_And_Events
         {
             try
             {
-                string query = $@"
+                string query = @"
                     UPDATE bs_holidays 
-                    SET from_date = '{start_date}', 
-                        to_date = '{end_date}', 
-                        description = '{eventname}', 
-                        type = '{status}' 
-                    WHERE id = {id} AND sys_user_id = '{schoolid}'";
+                    SET from_date = @FromDate, 
+                        to_date = @ToDate, 
+                        description = @Description, 
+                        type = @Type 
+                    WHERE id = @Id AND sys_user_id = @SchoolId";
 
-                int rowsAffected = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                int rowsAffected = _sql_qury_execution.DML_Insert_Update_Delete(query, new Dictionary<string, object>
+                {
+                    { "@FromDate", start_date },
+                    { "@ToDate", end_date },
+                    { "@Description", eventname },
+                    { "@Type", status },
+                    { "@Id", id },
+                    { "@SchoolId", schoolid }
+                });
 
                 Console.WriteLine($"🔥 Rows Affected: {rowsAffected}");
 

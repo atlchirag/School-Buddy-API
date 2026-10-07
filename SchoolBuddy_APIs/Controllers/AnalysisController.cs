@@ -44,12 +44,17 @@ namespace SchoolBuddy_APIs.Controllers
                 i2,
                 CONVERT(VARCHAR(8), DATEADD(MINUTE, 330, gps_time), 108) AS time
             FROM {tableName}
-            WHERE sys_service_id = {service_id}
-              AND gps_time BETWEEN DATEADD(MINUTE, -330, '{checkIgnition.start_date}')
-                               AND DATEADD(MINUTE, -330, '{checkIgnition.end_date}')
+            WHERE sys_service_id = @ServiceId
+              AND gps_time BETWEEN DATEADD(MINUTE, -330, @StartDate)
+                               AND DATEADD(MINUTE, -330, @EndDate)
             ORDER BY gps_time";
 
-                DataTable datatable = _sql_qury_execution.DML_Select(query);
+                DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@ServiceId", service_id },
+                    { "@StartDate", checkIgnition.start_date },
+                    { "@EndDate", checkIgnition.end_date }
+                });
 
                 if (datatable != null && datatable.Rows.Count > 0)
                 {
@@ -96,12 +101,17 @@ namespace SchoolBuddy_APIs.Controllers
                     ELSE 'active'
                 END AS status
             FROM tbl_telemetry_{year}
-            WHERE sys_service_id = {service_id}
-              AND gps_time BETWEEN DATEADD(MINUTE, -330, '{checkInActive.start_date}')
-                               AND DATEADD(MINUTE, -330, '{checkInActive.end_date}')
+            WHERE sys_service_id = @ServiceId
+              AND gps_time BETWEEN DATEADD(MINUTE, -330, @StartDate)
+                               AND DATEADD(MINUTE, -330, @EndDate)
             ORDER BY gps_time";
 
-                DataTable datatable = _sql_qury_execution.DML_Select(query);
+                DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@ServiceId", service_id },
+                    { "@StartDate", checkInActive.start_date },
+                    { "@EndDate", checkInActive.end_date }
+                });
 
                 if (datatable != null && datatable.Rows.Count > 0)
                 {
@@ -144,7 +154,7 @@ namespace SchoolBuddy_APIs.Controllers
                     return Content("0", "application/json");
                 }
 
-                string select_query = $@"
+                string select_query = @"
             SELECT 
                 id,
                 route_name,
@@ -153,10 +163,13 @@ namespace SchoolBuddy_APIs.Controllers
                 end_time_up,
                 is_pis_enabled
             FROM bs_route_master
-            WHERE sys_user_id = {route.schoolid}
+            WHERE sys_user_id = @SchoolId
             ORDER BY route_name";
 
-                DataTable dataTable = _sql_qury_execution.DML_Select(select_query);
+                DataTable dataTable = _sql_qury_execution.DML_Select(select_query, new Dictionary<string, object>
+                {
+                    { "@SchoolId", route.schoolid }
+                });
 
                 if (dataTable != null && dataTable.Rows.Count > 0)
                 {
@@ -198,10 +211,15 @@ namespace SchoolBuddy_APIs.Controllers
                     //}
                     //else
                     //{
-                        query.Append($"select  convert(varchar(8),dateadd(minute,330,gps_time),108) as time, case when datediff(minute,DATEADD(minute,330,gps_time),sys_proc_time) > 5 then 'inactive' else 'active' end as status from telemetry_{year} where sys_service_id= {service_id} and gps_time between dateadd(minute,-330,'" + checkInActive.start_date + "') and dateadd(minute,-330,'" + checkInActive.end_date + "') order by gps_time");
+                        query.Append($"select  convert(varchar(8),dateadd(minute,330,gps_time),108) as time, case when datediff(minute,DATEADD(minute,330,gps_time),sys_proc_time) > 5 then 'inactive' else 'active' end as status from telemetry_{year} where sys_service_id= @ServiceId and gps_time between dateadd(minute,-330,@StartDate) and dateadd(minute,-330,@EndDate) order by gps_time");
 
                    // }
-                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString());
+                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString(), new Dictionary<string, object>
+                    {
+                        { "@ServiceId", service_id },
+                        { "@StartDate", checkInActive.start_date },
+                        { "@EndDate", checkInActive.end_date }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -261,10 +279,15 @@ namespace SchoolBuddy_APIs.Controllers
                     //}
                     //else
                     //{
-                        query.Append($"select  convert(varchar(8),dateadd(minute,330,gps_time),108) as time, case when datediff(minute,DATEADD(minute,330,gps_time),sys_proc_time) > 5 then 'inactive' else 'active' end as status from telemetry_{year} where sys_service_id= {service_id} and gps_time between dateadd(minute,-330,'" + checkInActive.start_date + "') and dateadd(minute,-330,'" + checkInActive.end_date + "') order by gps_time");
+                        query.Append($"select  convert(varchar(8),dateadd(minute,330,gps_time),108) as time, case when datediff(minute,DATEADD(minute,330,gps_time),sys_proc_time) > 5 then 'inactive' else 'active' end as status from telemetry_{year} where sys_service_id= @ServiceId and gps_time between dateadd(minute,-330,@StartDate) and dateadd(minute,-330,@EndDate) order by gps_time");
 
                     //}
-                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString());
+                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString(), new Dictionary<string, object>
+                    {
+                        { "@ServiceId", service_id },
+                        { "@StartDate", checkInActive.start_date },
+                        { "@EndDate", checkInActive.end_date }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -306,10 +329,13 @@ namespace SchoolBuddy_APIs.Controllers
             try
             {
                 #region
-                string select_query = $@"select * from bs_route_vias where route_id='{vias.route_id}' order by via_order";
+                string select_query = @"select * from bs_route_vias where route_id=@RouteId order by via_order";
                 #endregion
 
-                DataTable dataTable = _sql_qury_execution.DML_Select(select_query);
+                DataTable dataTable = _sql_qury_execution.DML_Select(select_query, new Dictionary<string, object>
+                {
+                    { "@RouteId", vias.route_id }
+                });
                 if (dataTable != null)
                 {
 
@@ -361,7 +387,7 @@ namespace SchoolBuddy_APIs.Controllers
 
                 #region NEW CODE - Current ETA of all stops from bs_stop_master
 
-                string select_query = $@"
+                string select_query = @"
                 SELECT 
                     brm.route_name,
                     bsm.user_stop_name,
@@ -384,12 +410,15 @@ namespace SchoolBuddy_APIs.Controllers
                 
                 FROM bs_stop_master bsm
                 INNER JOIN bs_route_master brm ON brm.id = bsm.route_id
-                WHERE bsm.route_id = {eta.route_id}
+                WHERE bsm.route_id = @RouteId
                 ORDER BY bsm.stop_order";
 
                 #endregion
 
-                DataTable dataTable = _sql_qury_execution.DML_Select(select_query);
+                DataTable dataTable = _sql_qury_execution.DML_Select(select_query, new Dictionary<string, object>
+                {
+                    { "@RouteId", eta.route_id }
+                });
 
                 if (dataTable != null && dataTable.Rows.Count > 0)
                 {
@@ -412,11 +441,14 @@ namespace SchoolBuddy_APIs.Controllers
             try
             {
                 #region
-                string select_query = $@"select user_stop_name ,link_no from bs_stop_master where route_id={vias.route_id} 
+                string select_query = @"select user_stop_name ,link_no from bs_stop_master where route_id=@RouteId 
                                          order by stop_order";
                 #endregion
 
-                DataTable dataTable = _sql_qury_execution.DML_Select(select_query);
+                DataTable dataTable = _sql_qury_execution.DML_Select(select_query, new Dictionary<string, object>
+                {
+                    { "@RouteId", vias.route_id }
+                });
                 if (dataTable != null)
                 {
 

@@ -24,7 +24,7 @@ namespace SchoolBuddy_APIs.Controllers
         {
             try
             {
-                string query = $@"
+                string query = @"
         INSERT INTO bs_staff_master
         (
             emp_code,
@@ -38,19 +38,29 @@ name,
         )
         VALUES
         (
-            '{staff.emp_code}',
-            '{staff.name}',
-            '{staff.rf_id}',
-            '{staff.mobile_no}',
-            '{staff.address}',
-            '{staff.in_time:yyyy-MM-dd HH:mm:ss}',
-            '{staff.out_time:yyyy-MM-dd HH:mm:ss}',
-             {staff.sys_user_id}
+            @EmpCode,
+            @Name,
+            @RfId,
+            @MobileNo,
+            @Address,
+            @InTime,
+            @OutTime,
+            @SysUserId
         )";
 
                 int result =
                     _sql_qury_execution
-                    .DML_Insert_Update_Delete(query);
+                    .DML_Insert_Update_Delete(query, new Dictionary<string, object>
+                    {
+                        { "@EmpCode", staff.emp_code },
+                        { "@Name", staff.name },
+                        { "@RfId", staff.rf_id },
+                        { "@MobileNo", staff.mobile_no },
+                        { "@Address", staff.address },
+                        { "@InTime", staff.in_time },
+                        { "@OutTime", staff.out_time },
+                        { "@SysUserId", staff.sys_user_id }
+                    });
                 if (result > 0)
                     return true;
 
@@ -69,7 +79,7 @@ name,
         {
             try
             {
-                string query = $@"
+                string query = @"
                     SELECT
                         emp_code,name,
                         rf_id,
@@ -79,10 +89,13 @@ name,
                         out_time,
                         sys_user_id
                     FROM bs_staff_master
-                    WHERE sys_user_id = {uid}
+                    WHERE sys_user_id = @SysUserId
                     ORDER BY emp_code";
 
-                DataTable staffTable = _sql_qury_execution.DML_Select(query);
+                DataTable staffTable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@SysUserId", uid }
+                });
                 string json = JsonConvert.SerializeObject(staffTable, Formatting.Indented);
 
                 return Content(json, "application/json");
@@ -139,9 +152,9 @@ name,
                             try
                             {
                                 string empCodeValue = GetCellValue(row, "Employee Code");
-                                string mobileNo = EscapeSql(GetCellValue(row, "Mobile Number"));
-                                string rfId = EscapeSql(GetCellValue(row, "RFID"));
-                                string address = EscapeSql(GetCellValue(row, "Address"));
+                                string mobileNo = GetCellValue(row, "Mobile Number");
+                                string rfId = GetCellValue(row, "RFID");
+                                string address = GetCellValue(row, "Address");
                                 string inTimeValue = GetCellValue(row, "In Time");
                                 string outTimeValue = GetCellValue(row, "Out Time");
                                 string name = GetCellValue(row, "Name");
@@ -173,33 +186,37 @@ name,
                                     continue;
                                 }
 
-                                string escapedUserId = EscapeSql(user_id);
-                                string duplicateCheckQuery = $@"
+                                var staffKeyParams = new Dictionary<string, object>
+                                {
+                                    { "@EmpCode", empCode },
+                                    { "@SysUserId", user_id.Trim() }
+                                };
+                                string duplicateCheckQuery = @"
                                     SELECT emp_code
                                     FROM bs_staff_master
-                                    WHERE emp_code = {empCode}
-                                      AND sys_user_id = '{escapedUserId}'";
+                                    WHERE emp_code = @EmpCode
+                                      AND sys_user_id = @SysUserId";
 
-                                DataTable existingStaff = _sql_qury_execution.DML_Select(duplicateCheckQuery);
+                                DataTable existingStaff = _sql_qury_execution.DML_Select(duplicateCheckQuery, staffKeyParams);
                                 if (existingStaff != null && existingStaff.Rows.Count > 0)
                                 {
                                     errors.Add($"Skipping duplicate employee code: {empCode}");
                                     continue;
                                 }
-                                string duplicateRFIDCheckQuery = $@"
+                                string duplicateRFIDCheckQuery = @"
                                     SELECT rf_id
                                     FROM bs_staff_master
-                                    WHERE emp_code = {empCode}
-                                      AND sys_user_id = '{escapedUserId}'";
+                                    WHERE emp_code = @EmpCode
+                                      AND sys_user_id = @SysUserId";
 
-                                DataTable existingrfid = _sql_qury_execution.DML_Select(duplicateRFIDCheckQuery);
+                                DataTable existingrfid = _sql_qury_execution.DML_Select(duplicateRFIDCheckQuery, staffKeyParams);
                                 if (existingrfid != null && existingrfid.Rows.Count > 0)
                                 {
                                     errors.Add($"Skipping duplicate RFID code: {empCode}");
                                     continue;
                                 }
 
-                                string insertQuery = $@"
+                                string insertQuery = @"
                                     INSERT INTO bs_staff_master
                                     (
                                         emp_code,
@@ -213,17 +230,27 @@ name,
                                     )
                                     VALUES
                                     (
-                                        {empCode},
-                                        '{name}',
-                                        '{rfId}',
-                                        '{mobileNo}',
-                                        '{address}',
-                                        '{inTime:yyyy-MM-dd HH:mm:ss}',
-                                        '{outTime:yyyy-MM-dd HH:mm:ss}',
-                                        '{escapedUserId}'
+                                        @EmpCode,
+                                        @Name,
+                                        @RfId,
+                                        @MobileNo,
+                                        @Address,
+                                        @InTime,
+                                        @OutTime,
+                                        @SysUserId
                                     )";
 
-                                int rowsAffected = _sql_qury_execution.DML_Insert_Update_Delete(insertQuery);
+                                int rowsAffected = _sql_qury_execution.DML_Insert_Update_Delete(insertQuery, new Dictionary<string, object>
+                                {
+                                    { "@EmpCode", empCode },
+                                    { "@Name", name },
+                                    { "@RfId", rfId },
+                                    { "@MobileNo", mobileNo },
+                                    { "@Address", address },
+                                    { "@InTime", inTime },
+                                    { "@OutTime", outTime },
+                                    { "@SysUserId", user_id.Trim() }
+                                });
                                 if (rowsAffected > 0)
                                 {
                                     insertedCount++;
@@ -278,11 +305,6 @@ name,
             }
 
             return DateTime.TryParse(value, out dateTime);
-        }
-
-        private static string EscapeSql(string value)
-        {
-            return value.Replace("'", "''").Trim();
         }
     }
 }

@@ -164,16 +164,22 @@ WHERE l.id = @LeaveId
                     return Content(JsonConvert.SerializeObject(new { status = "-1", msg = $"Leave is already {LeaveStatus.Text(request.status)}" }), "application/json");
                 }
 
-                string updateQuery = $@"
+                string updateQuery = @"
 UPDATE bs_leave_master
-SET is_approved = {request.status},
-    is_pending = 1,
-    remark = {(remark == "" ? "NULL" : $"'{remark.Replace("'", "''")}'")},
-    action_by = {schoolId},
+SET is_approved = @Status,
+    ispending = 1,
+    remark = @Remark,
+    action_by = @SchoolId,
     action_on = GETDATE()
-WHERE id = {request.leave_id};";
+WHERE id = @LeaveId;";
 
-                int rowsAffected = _sql_qury_execution.DML_Insert_Update_Delete(updateQuery);
+                int rowsAffected = _sql_qury_execution.DML_Insert_Update_Delete(updateQuery, new Dictionary<string, object>
+                {
+                    { "@Status", request.status },
+                    { "@Remark", remark == "" ? DBNull.Value : remark },
+                    { "@SchoolId", schoolId },
+                    { "@LeaveId", request.leave_id }
+                });
                 if (rowsAffected <= 0)
                 {
                     return Content(JsonConvert.SerializeObject(new { status = "0", msg = "fail" }), "application/json");

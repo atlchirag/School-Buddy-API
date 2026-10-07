@@ -31,12 +31,15 @@ namespace SchoolBuddy_APIs.Controllers
             {
                 if (!String.IsNullOrEmpty(school.id))
                 {
-                    string getcommand = $@"select bm.id,r.route_name,bm.message 
+                    string getcommand = @"select bm.id,r.route_name,bm.message 
                                             from bs_broadcast_msg bm
                                             inner join bs_route_master r
                                             on 
-                                            r.id=bm.route_id where bm.sys_user_id = {school.id}";
-                    DataTable dataTable = _sql_qury_execution.DML_Select(getcommand);
+                                            r.id=bm.route_id where bm.sys_user_id = @SysUserId";
+                    DataTable dataTable = _sql_qury_execution.DML_Select(getcommand, new Dictionary<string, object>
+                    {
+                        { "@SysUserId", school.id }
+                    });
                     if (dataTable != null)
                     {
                         if (dataTable.Rows.Count >= 0)
@@ -75,8 +78,11 @@ namespace SchoolBuddy_APIs.Controllers
             {
                 if (!String.IsNullOrEmpty(school.id))
                 {
-                    string getcommand = $@"select id,sent_date,reason,is_pending from bs_broadcast_msg where id = {school.id}";
-                    DataTable dataTable = _sql_qury_execution.DML_Select(getcommand);
+                    string getcommand = @"select id,sent_date,reason,is_pending from bs_broadcast_msg where id = @Id";
+                    DataTable dataTable = _sql_qury_execution.DML_Select(getcommand, new Dictionary<string, object>
+                    {
+                        { "@Id", school.id }
+                    });
                     if (dataTable != null)
                     {
                         if (dataTable.Rows.Count >= 0)
@@ -113,11 +119,17 @@ namespace SchoolBuddy_APIs.Controllers
             try
             {
              
-            string query_newtrack = $@"insert into bs_broadcast_msg (sys_user_id, route_id, sent_date, message,reason,is_pending)
-                                    values ('{add.sys_user_id}','{add.route_id}',getdate(),
-                                    '{add.message}','{add.reason}',1)";
+            string query_newtrack = @"insert into bs_broadcast_msg (sys_user_id, route_id, sent_date, message,reason,is_pending)
+                                    values (@SysUserId,@RouteId,getdate(),
+                                    @Message,@Reason,1)";
 
-                int row_affected = _sql_qury_execution.DML_Insert_Update_Delete(query_newtrack);
+                int row_affected = _sql_qury_execution.DML_Insert_Update_Delete(query_newtrack, new Dictionary<string, object>
+                {
+                    { "@SysUserId", add.sys_user_id },
+                    { "@RouteId", add.route_id },
+                    { "@Message", add.message },
+                    { "@Reason", add.reason }
+                });
                 if (row_affected > 0)
                 {
                     return true;

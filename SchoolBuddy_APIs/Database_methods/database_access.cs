@@ -15,7 +15,7 @@ namespace SchoolBuddy_APIs.Database_methods
         }
 
         // ================= INSERT / UPDATE / DELETE =================
-        public int DML_Insert_Update_Delete(string query)
+        public int DML_Insert_Update_Delete(string query, Dictionary<string, object>? parameters = null)
         {
             int row_affected = 0;
 
@@ -25,6 +25,7 @@ namespace SchoolBuddy_APIs.Database_methods
                 using (SqlCommand command = new SqlCommand(query, sqlConnection))
                 {
                     command.CommandTimeout = 30;
+                    AddParameters(command, parameters);
                     sqlConnection.Open();
                     row_affected = command.ExecuteNonQuery();
                 }
@@ -49,14 +50,7 @@ namespace SchoolBuddy_APIs.Database_methods
                 using (SqlCommand command = new SqlCommand(query, sqlConnection))
                 {
                     command.CommandTimeout = 30;
-
-                    if (parameters != null)
-                    {
-                        foreach (var param in parameters)
-                        {
-                            command.Parameters.AddWithValue(param.Key, param.Value ?? DBNull.Value);
-                        }
-                    }
+                    AddParameters(command, parameters);
 
                     using (SqlDataAdapter dataAdapter = new SqlDataAdapter(command))
                     {
@@ -77,6 +71,12 @@ namespace SchoolBuddy_APIs.Database_methods
         // ================= TRANSACTION =================
         public int DML_Insert_Update_Delete_with_Transaction(params string[] queries)
         {
+            return DML_Insert_Update_Delete_with_Transaction(
+                queries.Select(q => (q, (Dictionary<string, object>?)null)).ToArray());
+        }
+
+        public int DML_Insert_Update_Delete_with_Transaction(params (string query, Dictionary<string, object>? parameters)[] commands)
+        {
             int row_affected = 0;
 
             using (SqlConnection sqlConnection = new SqlConnection(_connectionString))
@@ -87,11 +87,12 @@ namespace SchoolBuddy_APIs.Database_methods
                 {
                     try
                     {
-                        foreach (var query in queries)
+                        foreach (var (query, parameters) in commands)
                         {
                             using (SqlCommand command = new SqlCommand(query, sqlConnection, transaction))
                             {
                                 command.CommandTimeout = 30;
+                                AddParameters(command, parameters);
                                 row_affected += command.ExecuteNonQuery();
                             }
                         }
@@ -107,10 +108,21 @@ namespace SchoolBuddy_APIs.Database_methods
                         }
                         catch { }
 
-                        LogError("DML_Transaction", string.Join(" | ", queries), ex);
+                        LogError("DML_Transaction", string.Join(" | ", commands.Select(c => c.query)), ex);
                         return 0;
                     }
                 }
+            }
+        }
+
+        // ================= PARAMETERS =================
+        private static void AddParameters(SqlCommand command, Dictionary<string, object>? parameters)
+        {
+            if (parameters == null) return;
+
+            foreach (var param in parameters)
+            {
+                command.Parameters.AddWithValue(param.Key, param.Value ?? DBNull.Value);
             }
         }
 

@@ -34,12 +34,23 @@ namespace SchoolBuddy_APIs.Controllers
                 if (model == null || model.Uid == 0)
                     return BadRequest("Invalid data: Uid is missing.");
 
-                DataTable dt = _sql_qury_execution.DML_Select($"SELECT id FROM bs_teacher_master WHERE class={model.ClassId} AND section='{model.Section}' AND sys_user_id={model.Uid}");
+                var teacherParams = new Dictionary<string, object>
+                {
+                    { "@Uid", model.Uid },
+                    { "@TeacherName", model.TeacherName },
+                    { "@TeacherLogin", model.TeacherLogin },
+                    { "@Password", model.Password },
+                    { "@ClassId", model.ClassId },
+                    { "@Section", model.Section },
+                    { "@StartTime", model.StartTime }
+                };
+
+                DataTable dt = _sql_qury_execution.DML_Select("SELECT id FROM bs_teacher_master WHERE class=@ClassId AND section=@Section AND sys_user_id=@Uid", teacherParams);
                 if (dt.Rows.Count > 0)
                     return Conflict();
 
-                string query = $"INSERT INTO s VALUES ({model.Uid}, '{model.TeacherName}', '{model.TeacherLogin}', '{model.Password}', {model.ClassId}, '{model.Section}', '{model.StartTime}')";
-                int result = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                string query = "INSERT INTO s VALUES (@Uid, @TeacherName, @TeacherLogin, @Password, @ClassId, @Section, @StartTime)";
+                int result = _sql_qury_execution.DML_Insert_Update_Delete(query, teacherParams);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -59,17 +70,26 @@ namespace SchoolBuddy_APIs.Controllers
             if (model == null || model.Id == 0)
                 return BadRequest("Invalid teacher data");
 
-            string query = $@"
+            string query = @"
         UPDATE bs_teacher_master
-        SET teacher_name = '{model.TeacherName}', 
-            teacher_login = '{model.TeacherLogin}', 
-            teacher_pass = '{model.Password}', 
-            class = {model.ClassId}, 
-            section = '{model.Section}', 
-            start_time = '{model.StartTime}'
-        WHERE id = {model.Id}";
+        SET teacher_name = @TeacherName, 
+            teacher_login = @TeacherLogin, 
+            teacher_pass = @Password, 
+            class = @ClassId, 
+            section = @Section, 
+            start_time = @StartTime
+        WHERE id = @Id";
 
-            int result = _sql_qury_execution.DML_Insert_Update_Delete(query);
+            int result = _sql_qury_execution.DML_Insert_Update_Delete(query, new Dictionary<string, object>
+            {
+                { "@TeacherName", model.TeacherName },
+                { "@TeacherLogin", model.TeacherLogin },
+                { "@Password", model.Password },
+                { "@ClassId", model.ClassId },
+                { "@Section", model.Section },
+                { "@StartTime", model.StartTime },
+                { "@Id", model.Id }
+            });
             return result > 0 ? Ok("Teacher updated successfully") : BadRequest("Update failed");
         }
 
@@ -79,8 +99,11 @@ namespace SchoolBuddy_APIs.Controllers
             if (id == 0)
                 return BadRequest("Invalid teacher ID");
 
-            string query = $"DELETE FROM bs_teacher_master WHERE id = {id}";
-            int result = _sql_qury_execution.DML_Insert_Update_Delete(query);
+            string query = "DELETE FROM bs_teacher_master WHERE id = @Id";
+            int result = _sql_qury_execution.DML_Insert_Update_Delete(query, new Dictionary<string, object>
+            {
+                { "@Id", id }
+            });
 
             return result > 0 ? Ok("Teacher deleted successfully") : BadRequest("Failed to delete teacher");
         }
@@ -101,12 +124,15 @@ namespace SchoolBuddy_APIs.Controllers
                 return BadRequest("Invalid teacher ID");
 
           //  DataTable dt = _sql_qury_execution.DML_Select($"SELECT * FROM bs_teacher_master WHERE id={id}");
-            DataTable dt = _sql_qury_execution.DML_Select($@"
+            DataTable dt = _sql_qury_execution.DML_Select(@"
         SELECT t.id, t.sys_user_id AS Uid, t.teacher_name, t.teacher_login, t.teacher_pass, 
                t.class AS ClassId, t.section, t.start_time, c.class_name 
         FROM bs_teacher_master t 
         INNER JOIN bs_class_master c ON c.id = t.class 
-        WHERE t.id={id}");
+        WHERE t.id=@Id", new Dictionary<string, object>
+            {
+                { "@Id", id }
+            });
 
             if (dt.Rows.Count == 0)
                 return NotFound();
@@ -137,13 +163,16 @@ namespace SchoolBuddy_APIs.Controllers
             if (uid == 0)
                 return Unauthorized();
 
-            DataTable dt = _sql_qury_execution.DML_Select($@"
+            DataTable dt = _sql_qury_execution.DML_Select(@"
         SELECT t.id, t.sys_user_id AS Uid, t.teacher_name, t.teacher_login, t.teacher_pass AS Password, 
                t.class AS ClassId, t.section, t.start_time, c.class_name 
         FROM bs_teacher_master t 
         INNER JOIN bs_class_master c ON c.id = t.class 
-        WHERE sys_user_id={uid} 
-        ORDER BY t.id");
+        WHERE sys_user_id=@Uid 
+        ORDER BY t.id", new Dictionary<string, object>
+            {
+                { "@Uid", uid }
+            });
 
             // Convert DataTable to List<TeacherModel>
             List<TeacherModel> teachers = new List<TeacherModel>();
@@ -189,7 +218,10 @@ namespace SchoolBuddy_APIs.Controllers
             if (uid == 0)
                 return Unauthorized();
 
-            DataTable dt = _sql_qury_execution.DML_Select($"SELECT DISTINCT LTRIM(RTRIM(UPPER(section))) AS section FROM bs_student_master_backup WHERE sys_user_id={uid} ORDER BY section");
+            DataTable dt = _sql_qury_execution.DML_Select("SELECT DISTINCT LTRIM(RTRIM(UPPER(section))) AS section FROM bs_student_master_backup WHERE sys_user_id=@Uid ORDER BY section", new Dictionary<string, object>
+            {
+                { "@Uid", uid }
+            });
             return Ok(JsonConvert.SerializeObject(dt));
         }
     }

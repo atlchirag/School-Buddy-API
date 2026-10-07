@@ -50,8 +50,8 @@ namespace SchoolBuddy_APIs.Controllers
                 if (user_id != null)
                 {
                     string query = @$"
-DECLARE @AttendanceDate DATE = '{from}';
-DECLARE @UserId INT = {user_id};
+DECLARE @AttendanceDate DATE = @AttendanceDateParam;
+DECLARE @UserId INT = @UserIdParam;
 
 ;WITH Students AS
 (
@@ -175,7 +175,11 @@ ORDER BY
 
 ";
 
-                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString());
+                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString(), new Dictionary<string, object>
+                    {
+                        { "@AttendanceDateParam", from },
+                        { "@UserIdParam", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -241,9 +245,9 @@ ORDER BY
                 if (user_id != null)
                 {
                     string query = $@"
-DECLARE @AttendanceDate DATE = '{from}';
-DECLARE @UserId INT = {user_id};
-DECLARE @ClassId VARCHAR(100) = '{notfy.class_id}';
+DECLARE @AttendanceDate DATE = @AttendanceDateParam;
+DECLARE @UserId INT = @UserIdParam;
+DECLARE @ClassId VARCHAR(100) = @ClassIdParam;
 
 ;WITH ClassStudents AS
 (
@@ -388,7 +392,12 @@ ORDER BY
     cs.StudentName;
 ";
 
-                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString());
+                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString(), new Dictionary<string, object>
+                    {
+                        { "@AttendanceDateParam", from },
+                        { "@UserIdParam", user_id },
+                        { "@ClassIdParam", notfy.class_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)

@@ -67,8 +67,8 @@ namespace SchoolBuddy_APIs.Controllers
                             query.Append($"on noti.parent_id = bum.id left join bs_route_master brm ");
                             query.Append($"on noti.Route_id = brm.id left  join bs_student_master_backup student ");
                             query.Append($"on bum.id = student.bs_user_id left join users u ");
-                            query.Append($"on student.sys_user_id = u.id where cast(noti.date_time as Date) = '{date}' ");
-                            query.Append($"and u.Id ='{user_id}' order by student.student_name;");
+                            query.Append($"on student.sys_user_id = u.id where cast(noti.date_time as Date) = @Date ");
+                            query.Append($"and u.Id =@UserId order by student.student_name;");
                             //query.Append($"SELECT student.student_name,student.admission_no,brm.route_name, brm.id ,bum.bs_user_name as mobile_no,noti.message,    'Sent' AS status from bs_notification_parent noti inner join bs_user_master bum on noti.parent_id = bum.id inner join bs_route_master brm on noti.Route_id = brm.id inner join bs_student_master_backup student on noti.student_id = student.id inner join users u on student.sys_user_id = u.id where cast(noti.date_time as Date) ='{date}' and u.Id ='{user_id}' order by student.student_name;");
                         }
                         else
@@ -79,8 +79,8 @@ namespace SchoolBuddy_APIs.Controllers
                             query.Append($"on noti.parent_id = bum.id left join bs_route_master brm ");
                             query.Append($"on noti.Route_id = brm.id left  join bs_student_master_backup student ");
                             query.Append($"on bum.id = student.bs_user_id left join [atltracking].[dbo].tbl_users u ");
-                            query.Append($"on student.sys_user_id = u.id where cast(noti.date_time as Date) = '{date}'  ");
-                            query.Append($"and u.Id ='{user_id}' order by student.student_name;");
+                            query.Append($"on student.sys_user_id = u.id where cast(noti.date_time as Date) = @Date  ");
+                            query.Append($"and u.Id =@UserId order by student.student_name;");
                             //query.Append($"SELECT student.student_name,student.admission_no,brm.route_name, brm.id ,bum.bs_user_name as mobile_no,noti.message ,'Sent' AS status from bs_notification_parent noti inner join bs_user_master bum on noti.parent_id = bum.id inner join bs_route_master brm on noti.Route_id = brm.id inner join bs_student_master_backup student on noti.student_id = student.id inner join atltracking.[dbo].tbl_users u on student.sys_user_id = u.id where cast(noti.date_time as Date) ='{date}' and u.Id ='{user_id}' order by student.student_name;");
                         }
                     }
@@ -96,7 +96,7 @@ namespace SchoolBuddy_APIs.Controllers
                             //query.Append($"on bum.id = student.bs_user_id left join users u ");
                             //query.Append($"on student.sys_user_id = u.id where cast(noti.date_time as Date) = '{date}' ");
                             //query.Append($"and u.Id ='{user_id}' order by student.student_name;");
-                            query.Append($"SELECT student.student_name,student.admission_no,brm.route_name, brm.id ,bum.bs_user_name as mobile_no,noti.message,    'Sent' AS status from bs_notification_parent noti inner join bs_user_master bum on noti.parent_id = bum.id inner join bs_route_master brm on noti.Route_id = brm.id inner join bs_student_master_backup student on noti.student_id = student.id inner join users u on student.sys_user_id = u.id where cast(noti.date_time as Date) ='{date}' and u.Id ='{user_id}' order by student.student_name;");
+                            query.Append("SELECT student.student_name,student.admission_no,brm.route_name, brm.id ,bum.bs_user_name as mobile_no,noti.message,    'Sent' AS status from bs_notification_parent noti inner join bs_user_master bum on noti.parent_id = bum.id inner join bs_route_master brm on noti.Route_id = brm.id inner join bs_student_master_backup student on noti.student_id = student.id inner join users u on student.sys_user_id = u.id where cast(noti.date_time as Date) =@Date and u.Id =@UserId order by student.student_name;");
                         }
                         else
                         {
@@ -108,13 +108,17 @@ namespace SchoolBuddy_APIs.Controllers
                             //query.Append($"on bum.id = student.bs_user_id left join atltracking.[dbo].tbl_users u ");
                             //query.Append($"on student.sys_user_id = u.id where cast(noti.date_time as Date) = '{date}' ");
                             //query.Append($"and u.Id ='{user_id}' order by student.student_name;");
-                            query.Append($"SELECT student.student_name,student.admission_no,brm.route_name, brm.id ,bum.bs_user_name as mobile_no,noti.message ,'Sent' AS status from bs_notification_parent noti left join bs_user_master bum on noti.parent_id = bum.id left join bs_route_master brm on noti.Route_id = brm.id left join bs_student_master_backup student on noti.student_id = student.id inner join atltracking.[dbo].tbl_users u on student.sys_user_id = u.id where cast(noti.date_time as Date) ='{date}' and u.Id ='{user_id}' order by student.student_name;");
+                            query.Append("SELECT student.student_name,student.admission_no,brm.route_name, brm.id ,bum.bs_user_name as mobile_no,noti.message ,'Sent' AS status from bs_notification_parent noti left join bs_user_master bum on noti.parent_id = bum.id left join bs_route_master brm on noti.Route_id = brm.id left join bs_student_master_backup student on noti.student_id = student.id inner join atltracking.[dbo].tbl_users u on student.sys_user_id = u.id where cast(noti.date_time as Date) =@Date and u.Id =@UserId order by student.student_name;");
                         }
                     }
                 
                     
 
-                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString());
+                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString(), new Dictionary<string, object>
+                    {
+                        { "@Date", date },
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -175,9 +179,16 @@ namespace SchoolBuddy_APIs.Controllers
                     query.Append($"LEFT JOIN bs_route_master brm ON noti.Route_id = brm.id ");
                     query.Append($"LEFT  JOIN bs_student_master_backup student ON bum.id = student.bs_user_id ");
                     query.Append($"LEFT JOIN tbl_users u ON student.sys_user_id = u.id ");
-                    query.Append($"WHERE cast(noti.date_time AS Date)  between '{notfy.datefrom}' and '{notfy.dateto}' and u.Id = '{notfy.user_id}' and student.id in ({notfy.student_id}) order by student_id;");
+                    var parameters = new Dictionary<string, object>
+                    {
+                        { "@DateFrom", notfy.datefrom },
+                        { "@DateTo", notfy.dateto },
+                        { "@UserId", notfy.user_id }
+                    };
+                    string studentIds = SqlParameterHelper.AddInList(parameters, "StudentId", notfy.student_id);
+                    query.Append($"WHERE cast(noti.date_time AS Date)  between @DateFrom and @DateTo and u.Id = @UserId and student.id in ({studentIds}) order by student_id;");
 
-                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString());
+                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString(), parameters);
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -233,10 +244,13 @@ namespace SchoolBuddy_APIs.Controllers
                     query.Append($"SELECT s.veh_reg as Vehicle, dateadd(minute,-330,t.gps_time) as last_updated ");
                     query.Append($"FROM tbl_latest_telemetry t, services s ");
                     query.Append($"WHERE datediff(day,t.gps_time, dateadd(minute,-330,GETDATE()))>=1 ");
-                    query.Append($"and t.sys_service_id in (select id from services where sys_user_id='{user_id}') and t.sys_service_id=s.id");
+                    query.Append("and t.sys_service_id in (select id from services where sys_user_id=@UserId) and t.sys_service_id=s.id");
                     
 
-                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString());
+                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString(), new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -308,15 +322,20 @@ namespace SchoolBuddy_APIs.Controllers
                     query.Append($"p.login_time,p.source from bs_student_master_backup s inner join ");
                     query.Append($"bs_parent_login_log p on p.bs_user_id = s.bs_user_id inner join bs_class_master c on c.id = s.class ");
                     query.Append($"inner join bs_user_master u on u.id = p.bs_user_id ");
-                    query.Append($"where p.login_time between  '{Convert.ToDateTime(notfy.date).ToString("yyyy-MM-dd")}'");
-                    query.Append($"and '{Convert.ToDateTime(notfy.date).AddDays(1.0).ToString("yyyy-MM-dd")}' and u.sys_user_id={user_id} order by s.bs_user_id");
+                    query.Append("where p.login_time between  @FromDate ");
+                    query.Append("and @ToDate and u.sys_user_id=@UserId order by s.bs_user_id");
 
 
 
 
 
 
-                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString());
+                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString(), new Dictionary<string, object>
+                    {
+                        { "@FromDate", Convert.ToDateTime(notfy.date).Date },
+                        { "@ToDate", Convert.ToDateTime(notfy.date).Date.AddDays(1.0) },
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -485,8 +504,8 @@ namespace SchoolBuddy_APIs.Controllers
                         servicesTable = "atltracking.dbo.tbl_services";
                     }
                     query.Append($@"
-DECLARE @UserId INT = {user_id};
-DECLARE @PunchDate DATE = '{Convert.ToDateTime(notfy.date):yyyy-MM-dd}';
+DECLARE @UserId INT = @UserIdParam;
+DECLARE @PunchDate DATE = @PunchDateParam;
 
 DECLARE @FromDate DATETIME = CAST(@PunchDate AS DATETIME);
 DECLARE @ToDate DATETIME = DATEADD(DAY, 1, @FromDate);
@@ -873,7 +892,11 @@ ORDER BY rt.route_name
 
 OPTION(RECOMPILE);
 ");
-                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString());
+                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString(), new Dictionary<string, object>
+                    {
+                        { "@UserIdParam", user_id },
+                        { "@PunchDateParam", Convert.ToDateTime(notfy.date).Date }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -1058,10 +1081,14 @@ OPTION(RECOMPILE);
                     query.Append($"select sm.student_name, dateadd(minute,330, punch_time)");
                     query.Append($"as punch_time,in_out from uhf_punch_history uph inner join");
                     query.Append($"bs_student_master_backup sm on");
-                    query.Append($"sm.id=uph.student_id where sm.sys_user_id= '{user_id}' ");
-                    query.Append($"and punch_time between '{notfy.date}' and ");
-                    query.Append($"Convert.ToDateTime({notfy.date}).AddDays(1).ToString(\"yyyy-MM-dd\") + \"'\"))");
-                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString());
+                    query.Append("sm.id=uph.student_id where sm.sys_user_id= @UserId ");
+                    query.Append("and punch_time between @FromDate and @ToDate");
+                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString(), new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id },
+                        { "@FromDate", Convert.ToDateTime(notfy.date).Date },
+                        { "@ToDate", Convert.ToDateTime(notfy.date).Date.AddDays(1) }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -1160,11 +1187,11 @@ OPTION(RECOMPILE);
     LEFT JOIN bs_student_master_backup bsmb
         ON bsmb.id = r.student_id
 
-    WHERE s.sys_user_id = {user_id}
+    WHERE s.sys_user_id = @UserId
   
   AND r.sys_service_id IS NOT NULL
-  AND r.sys_proc_time >= '{from}'
-  AND r.sys_proc_time <= '{to}'
+  AND r.sys_proc_time >= @FromTime
+  AND r.sys_proc_time <= @ToTime
 )
 
 SELECT
@@ -1199,7 +1226,12 @@ FROM FirstAttendance
 WHERE RowNo = 1
 ORDER BY punch_gps_time ASC;
 ";
-                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString());
+                    DataTable datatable = _sql_qury_execution.DML_Select(query.ToString(), new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id },
+                        { "@FromTime", from },
+                        { "@ToTime", to }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)

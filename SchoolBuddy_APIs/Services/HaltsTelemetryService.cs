@@ -56,7 +56,8 @@ namespace SchoolBuddy_APIs.Services
 
             foreach (var t in candidates)
             {
-                using var check = new SqlCommand($"SELECT OBJECT_ID('{t}')", conn);
+                using var check = new SqlCommand("SELECT OBJECT_ID(@table)", conn);
+                check.Parameters.AddWithValue("@table", t);
                 var obj = await check.ExecuteScalarAsync();
                 if (obj != null && obj != DBNull.Value)
                     return t;

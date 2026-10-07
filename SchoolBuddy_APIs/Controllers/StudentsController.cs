@@ -50,11 +50,14 @@ namespace SchoolBuddy_APIs.Controllers
        "FROM bs_student_master_backup bsmb " +
        "LEFT JOIN bs_class_master bcm ON bcm.id = TRY_CONVERT(int, bsmb.class) " +  //  Safe conversion for class
        "LEFT JOIN bs_user_master bum ON bum.id = TRY_CONVERT(int, bsmb.parent_id) " + //  Safe conversion for parent_id
-       $"WHERE bsmb.sys_user_id = '{user_id}' ORDER BY bsmb.student_name";
+       "WHERE bsmb.sys_user_id = @UserId ORDER BY bsmb.student_name";
 
                     Console.WriteLine(query);   
                     //string query = $"select * from bs_student_master_backup where sys_user_id = '{user_id}'";
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count >= 0)
@@ -99,7 +102,7 @@ namespace SchoolBuddy_APIs.Controllers
                     return BadRequest("User ID is required.");
                 }
 
-                string query = $@"
+                string query = @"
             SELECT 
                 bsmb.admission_no,
                 bsmb.student_name,
@@ -115,12 +118,15 @@ namespace SchoolBuddy_APIs.Controllers
             FROM bs_student_master_backup bsmb
             LEFT JOIN bs_class_master bcm 
                 ON bcm.id = TRY_CONVERT(int, bsmb.class)
-            WHERE bsmb.sys_user_id = '{user_id}'
+            WHERE bsmb.sys_user_id = @UserId
             ORDER BY bsmb.student_name";
 
                 //Console.WriteLine("DownloadStudentsExcel Query: " + query);
 
-                DataTable dt = _sql_qury_execution.DML_Select(query);
+                DataTable dt = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@UserId", user_id }
+                });
 
                 if (dt == null || dt.Rows.Count == 0)
                 {
@@ -194,22 +200,39 @@ namespace SchoolBuddy_APIs.Controllers
             try
             {
                 #region EDIT QUERY
-                string query = $"UPDATE bs_student_master_backup SET " +
-                               $"admission_no = '{students.admission_no}', " +
-                               $"student_name = '{students.student_name}', " +
-                               $"dob = '{students.birth}', " +
-                               $"class = '{students.class_}', " +
-                               $"section = '{students.division}', " +
-                               $"father_name = '{students.parent_name}', " +
-                               $"mobile_no1 = '{students.mobile_no1}', " +
-                               $"street = '{students.street}', " +
-                               $"rf_id = '{students.rf_id}', " +
-                               $"email = '{students.email}' " +
-                               $"WHERE id = {students.id}";
+                string query = "UPDATE bs_student_master_backup SET " +
+                               "admission_no = @AdmissionNo, " +
+                               "student_name = @StudentName, " +
+                               "dob = @Dob, " +
+                               "class = @Class, " +
+                               "section = @Section, " +
+                               "father_name = @FatherName, " +
+                               "mobile_no1 = @MobileNo1, " +
+                               "street = @Street, " +
+                               "rf_id = @RfId, " +
+                               "email = @Email " +
+                               "WHERE id = @Id";
+                var studentParams = new Dictionary<string, object>
+                {
+                    { "@AdmissionNo", students.admission_no },
+                    { "@StudentName", students.student_name },
+                    { "@Dob", students.birth },
+                    { "@Class", students.class_ },
+                    { "@Section", students.division },
+                    { "@FatherName", students.parent_name },
+                    { "@MobileNo1", students.mobile_no1 },
+                    { "@Street", students.street },
+                    { "@RfId", students.rf_id },
+                    { "@Email", students.email },
+                    { "@Id", students.id }
+                };
                 #endregion
 
-                string query_ = $@"SELECT parent_id FROM bs_student_master_backup WHERE id = '{students.id}'";
-                DataTable dt = _sql_qury_execution.DML_Select(query_);
+                string query_ = @"SELECT parent_id FROM bs_student_master_backup WHERE id = @Id";
+                DataTable dt = _sql_qury_execution.DML_Select(query_, new Dictionary<string, object>
+                {
+                    { "@Id", students.id }
+                });
 
                 if (dt != null && dt.Rows.Count > 0)
                 {
@@ -218,19 +241,25 @@ namespace SchoolBuddy_APIs.Controllers
                     // Validate that parentId is an integer before using it in the query
                     if (!string.IsNullOrEmpty(parentId) && int.TryParse(parentId, out int parentIdInt))
                     {
-                        string query1 = $@"UPDATE bs_user_master 
-                                   SET name = '{students.parent_name}', 
-                                       bs_password = '12345', 
-                                       bs_user_name = '{students.mobile_no1}' 
-                                   WHERE id = {parentIdInt}";
+                        string query1 = @"UPDATE bs_user_master
+                                   SET name = @Name,
+                                       bs_password = '12345',
+                                       bs_user_name = @UserName
+                                   WHERE id = @ParentId";
+                        var parentParams = new Dictionary<string, object>
+                        {
+                            { "@Name", students.parent_name },
+                            { "@UserName", students.mobile_no1 },
+                            { "@ParentId", parentIdInt }
+                        };
 
-                        int res = _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction(query, query1);
+                        int res = _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction((query, studentParams), (query1, parentParams));
                         return res > 0;
                     }
                     else
                     {
                         // Only update the student record if parent_id is NULL or invalid
-                        int res = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                        int res = _sql_qury_execution.DML_Insert_Update_Delete(query, studentParams);
                         return res > 0;
                     }
                 }
@@ -256,7 +285,7 @@ namespace SchoolBuddy_APIs.Controllers
         {
             try
             {
-                string query = $@"SELECT bsmb.id, bsmb.rf_id, bsmb.student_name,
+                string query = @"SELECT bsmb.id, bsmb.rf_id, bsmb.student_name,
                                     bsmb.father_name AS parent_name, bsmb.mobile_no1,
                                     bsmb.street, bsmb.dob AS birth, bsmb.section AS division,
                                     bsmb.email, bsmb.admission_no, FORMAT(bsmb.added_on, 'yyyy-MM-dd HH:mm:ss') AS created_date,
@@ -264,10 +293,13 @@ namespace SchoolBuddy_APIs.Controllers
                                     FROM bs_student_master_backup bsmb
                                     LEFT JOIN bs_class_master bcm ON bcm.id = bsmb.class
                                     LEFT JOIN bs_user_master bum ON bum.id = bsmb.parent_id
-                                    WHERE bsmb.id = '{std.student_id}'";
+                                    WHERE bsmb.id = @StudentId";
                 //Console.WriteLine(query);
 
-                DataTable dataTable = _sql_qury_execution.DML_Select(query);
+                DataTable dataTable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@StudentId", std.student_id }
+                });
 
                 if (dataTable != null && dataTable.Rows.Count > 0)
                 {
@@ -310,10 +342,14 @@ namespace SchoolBuddy_APIs.Controllers
         {
             try
             {
-                string query = $"DELETE FROM bs_student_master_backup WHERE id = '{std.student_id}'";
+                string query = "DELETE FROM bs_student_master_backup WHERE id = @StudentId";
+                var studentParams = new Dictionary<string, object>
+                {
+                    { "@StudentId", std.student_id }
+                };
 
-                string query_ = $@"SELECT parent_id FROM bs_student_master_backup WHERE id = '{std.student_id}'";
-                DataTable dt = _sql_qury_execution.DML_Select(query_);
+                string query_ = @"SELECT parent_id FROM bs_student_master_backup WHERE id = @StudentId";
+                DataTable dt = _sql_qury_execution.DML_Select(query_, studentParams);
 
                 if (dt != null && dt.Rows.Count > 0)
                 {
@@ -321,15 +357,17 @@ namespace SchoolBuddy_APIs.Controllers
 
                     if (!string.IsNullOrEmpty(parentId) && int.TryParse(parentId, out int parentIdInt))
                     {
-                        string query1 = $@"DELETE FROM bs_user_master WHERE id = {parentIdInt}";
-                        int result = _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction(query, query1);
+                        string query1 = @"DELETE FROM bs_user_master WHERE id = @ParentId";
+                        int result = _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction(
+                            (query, studentParams),
+                            (query1, new Dictionary<string, object> { { "@ParentId", parentIdInt } }));
 
                         return result > 0;
                     }
                     else
                     {
                         // Only delete the student if parent_id is NULL or invalid
-                        int result = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                        int result = _sql_qury_execution.DML_Insert_Update_Delete(query, studentParams);
                         return result > 0;
                     }
                 }
@@ -356,8 +394,12 @@ namespace SchoolBuddy_APIs.Controllers
             try
             {
                 string parent_id = "";
-                string queryCheckUser = $"SELECT id FROM bs_user_master WHERE bs_user_name = '{students.mobile_no1}';";
-                DataTable userTable = _sql_qury_execution.DML_Select(queryCheckUser);
+                string queryCheckUser = "SELECT id FROM bs_user_master WHERE bs_user_name = @MobileNo1;";
+                var checkUserParams = new Dictionary<string, object>
+                {
+                    { "@MobileNo1", students.mobile_no1 }
+                };
+                DataTable userTable = _sql_qury_execution.DML_Select(queryCheckUser, checkUserParams);
 
                 if (userTable != null && userTable.Rows.Count > 0)
                 {
@@ -367,14 +409,19 @@ namespace SchoolBuddy_APIs.Controllers
                 else
                 {
                     // Insert new user into bs_user_master
-                    string insertUserQuery = $"INSERT INTO bs_user_master (sys_user_id, role_id, bs_user_name, bs_password, name) " +
-                                             $"VALUES ('{students.user_id}', 1, '{students.mobile_no1}', '12345', '{students.parent_name}');";
-                    int userInserted = _sql_qury_execution.DML_Insert_Update_Delete(insertUserQuery);
+                    string insertUserQuery = "INSERT INTO bs_user_master (sys_user_id, role_id, bs_user_name, bs_password, name) " +
+                                             "VALUES (@SysUserId, 1, @MobileNo1, '12345', @Name);";
+                    int userInserted = _sql_qury_execution.DML_Insert_Update_Delete(insertUserQuery, new Dictionary<string, object>
+                    {
+                        { "@SysUserId", students.user_id },
+                        { "@MobileNo1", students.mobile_no1 },
+                        { "@Name", students.parent_name }
+                    });
 
                     if (userInserted > 0)
                     {
                         // Retrieve new parent_id
-                        DataTable newUserTable = _sql_qury_execution.DML_Select(queryCheckUser);
+                        DataTable newUserTable = _sql_qury_execution.DML_Select(queryCheckUser, checkUserParams);
                         if (newUserTable != null && newUserTable.Rows.Count > 0)
                         {
                             parent_id = newUserTable.Rows[0]["id"].ToString();
@@ -387,9 +434,13 @@ namespace SchoolBuddy_APIs.Controllers
                 }
 
                 // Check if student record already exists
-                string queryCheckStudent = $"SELECT mobile_no1, admission_no FROM bs_student_master_backup " +
-                                            $"WHERE admission_no = '{students.admission_no}' AND mobile_no1 = '{students.mobile_no1}';";
-                DataTable studentTable = _sql_qury_execution.DML_Select(queryCheckStudent);
+                string queryCheckStudent = "SELECT mobile_no1, admission_no FROM bs_student_master_backup " +
+                                            "WHERE admission_no = @AdmissionNo AND mobile_no1 = @MobileNo1;";
+                DataTable studentTable = _sql_qury_execution.DML_Select(queryCheckStudent, new Dictionary<string, object>
+                {
+                    { "@AdmissionNo", students.admission_no },
+                    { "@MobileNo1", students.mobile_no1 }
+                });
 
                 if (studentTable != null && studentTable.Rows.Count > 0)
                 {
@@ -397,13 +448,27 @@ namespace SchoolBuddy_APIs.Controllers
                 }
 
                 // Insert student data into bs_student_master_backup
-                string insertStudentQuery = $"INSERT INTO bs_student_master_backup (bs_user_id, parent_id, admission_no, student_name, dob, class, section, " +
-                                            $"father_name, mobile_no1, street, rf_id, email, added_on, sys_user_id) " +
-                                            $"VALUES ('{parent_id}', '{parent_id}', '{students.admission_no}', '{students.student_name}', " +
-                                            $"'{students.birth}', '{students.class_}', '{students.division}', '{students.parent_name}', " +
-                                            $"'{students.mobile_no1}', '{students.street}', '{students.rf_id}', '{students.email}', GETDATE(), '{students.user_id}');";
+                string insertStudentQuery = "INSERT INTO bs_student_master_backup (bs_user_id, parent_id, admission_no, student_name, dob, class, section, " +
+                                            "father_name, mobile_no1, street, rf_id, email, added_on, sys_user_id) " +
+                                            "VALUES (@ParentId, @ParentId, @AdmissionNo, @StudentName, " +
+                                            "@Dob, @Class, @Section, @FatherName, " +
+                                            "@MobileNo1, @Street, @RfId, @Email, GETDATE(), @SysUserId);";
 
-                int studentInserted = _sql_qury_execution.DML_Insert_Update_Delete(insertStudentQuery);
+                int studentInserted = _sql_qury_execution.DML_Insert_Update_Delete(insertStudentQuery, new Dictionary<string, object>
+                {
+                    { "@ParentId", parent_id },
+                    { "@AdmissionNo", students.admission_no },
+                    { "@StudentName", students.student_name },
+                    { "@Dob", students.birth },
+                    { "@Class", students.class_ },
+                    { "@Section", students.division },
+                    { "@FatherName", students.parent_name },
+                    { "@MobileNo1", students.mobile_no1 },
+                    { "@Street", students.street },
+                    { "@RfId", students.rf_id },
+                    { "@Email", students.email },
+                    { "@SysUserId", students.user_id }
+                });
                 if (studentInserted > 0)
                 {
                     return Ok(new { status = "success", message = "Student added successfully!" });
@@ -430,9 +495,12 @@ namespace SchoolBuddy_APIs.Controllers
                 if (user_id != null)
                 {
                     //string query = $"select name from bs_all_students where user_id = '{user_id}'";
-                    string query = $"select id,student_name from bs_student_master_backup where sys_user_id = '{user_id}'";
+                    string query = "select id,student_name from bs_student_master_backup where sys_user_id = @UserId";
 
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -471,10 +539,13 @@ namespace SchoolBuddy_APIs.Controllers
             try
             {
                 #region DELETE ALL STUDENTS QUERY
-                string query = $"delete  from bs_student_master_backup where id = '{std.user_id}'";
+                string query = "delete  from bs_student_master_backup where id = @Id";
                 #endregion
 
-                int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                int rowaffected = _sql_qury_execution.DML_Insert_Update_Delete(query, new Dictionary<string, object>
+                {
+                    { "@Id", std.user_id }
+                });
                 if (rowaffected > 0)
                 {
                     return true;
@@ -515,8 +586,11 @@ namespace SchoolBuddy_APIs.Controllers
                     return BadRequest("Only .xlsx files are accepted.");
                 }
 
-                string get_all_students_from_school = $"SELECT * FROM bs_student_master_backup WHERE sys_user_id = {schoolid}";
-                DataTable allstudents = _sql_qury_execution.DML_Select(get_all_students_from_school);
+                string get_all_students_from_school = "SELECT * FROM bs_student_master_backup WHERE sys_user_id = @SchoolId";
+                DataTable allstudents = _sql_qury_execution.DML_Select(get_all_students_from_school, new Dictionary<string, object>
+                {
+                    { "@SchoolId", schoolid }
+                });
 
                 if (allstudents != null && allstudents.Rows.Count > 0)
                 {
@@ -583,21 +657,38 @@ namespace SchoolBuddy_APIs.Controllers
                                 {
                                     foreach (DataRow row in res)
                                     {
-                                        string getrecord_from_bs_user_master = $"SELECT id FROM bs_user_master WHERE bs_user_name='{row["mobile_no1"]}'";
+                                        string getrecord_from_bs_user_master = "SELECT id FROM bs_user_master WHERE bs_user_name=@MobileNo1";
                                         //Console.WriteLine(getrecord_from_bs_user_master);
-                                        DataTable dt = _sql_qury_execution.DML_Select(getrecord_from_bs_user_master);
+                                        DataTable dt = _sql_qury_execution.DML_Select(getrecord_from_bs_user_master, new Dictionary<string, object>
+                                        {
+                                            { "@MobileNo1", row["mobile_no1"] }
+                                        });
 
                                         //  RFID update only if provided
                                         string query_for_update_RFID = !string.IsNullOrWhiteSpace(RF_ID)
-                                            ? $@"UPDATE bs_student_master_backup SET rf_id = '{RF_ID}' WHERE id = {row["Id"]}"
+                                            ? @"UPDATE bs_student_master_backup SET rf_id = @RfId WHERE id = @StudentId"
                                             : null;
+                                        var updateRfidParams = new Dictionary<string, object>
+                                        {
+                                            { "@RfId", RF_ID },
+                                            { "@StudentId", row["Id"] }
+                                        };
 
-                                        string query_for_insert_in_bs_route_students = $@"INSERT INTO bs_route_students
+                                        string query_for_insert_in_bs_route_students = @"INSERT INTO bs_route_students
                                                                     (route_id, stop_id, student_id)
-                                                                    VALUES ({r_id}, {Stopid}, {row["Id"]})";
+                                                                    VALUES (@RouteId, @StopId, @StudentId)";
+                                        var routeStudentParams = new Dictionary<string, object>
+                                        {
+                                            { "@RouteId", r_id },
+                                            { "@StopId", Stopid },
+                                            { "@StudentId", row["Id"] }
+                                        };
 
-                                        string query_to_check_stop = $"SELECT id FROM bs_stop_master WHERE id = {Stopid}";
-                                        DataTable stops = _sql_qury_execution.DML_Select(query_to_check_stop);
+                                        string query_to_check_stop = "SELECT id FROM bs_stop_master WHERE id = @StopId";
+                                        DataTable stops = _sql_qury_execution.DML_Select(query_to_check_stop, new Dictionary<string, object>
+                                        {
+                                            { "@StopId", Stopid }
+                                        });
 
                                         if (stops != null && stops.Rows.Count > 0)
                                         {
@@ -606,21 +697,26 @@ namespace SchoolBuddy_APIs.Controllers
                                                 if (dt != null && dt.Rows.Count > 0)
                                                 {
                                                     int rowaffected = query_for_update_RFID != null
-                                                        ? _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction(query_for_update_RFID, query_for_insert_in_bs_route_students)
-                                                        : _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction(query_for_insert_in_bs_route_students);
+                                                        ? _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction((query_for_update_RFID, updateRfidParams), (query_for_insert_in_bs_route_students, routeStudentParams))
+                                                        : _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction((query_for_insert_in_bs_route_students, routeStudentParams));
 
                                                     if (rowaffected >= 1)
                                                         result += 1;
                                                 }
                                                 else if (dt.Rows.Count == 0)
                                                 {
-                                                    string query_for_insert_in_bs_user_master = $@"INSERT INTO bs_user_master
+                                                    string query_for_insert_in_bs_user_master = @"INSERT INTO bs_user_master
                                                                                (sys_user_id, bs_user_name, bs_password)
-                                                                                VALUES ({schoolid}, '{row["mobile_1"]}', 12345)";
+                                                                                VALUES (@SchoolId, @UserName, 12345)";
+                                                    var userMasterParams = new Dictionary<string, object>
+                                                    {
+                                                        { "@SchoolId", schoolid },
+                                                        { "@UserName", row["mobile_1"] }
+                                                    };
 
                                                     int rowaffected = query_for_update_RFID != null
-                                                        ? _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction(query_for_update_RFID, query_for_insert_in_bs_route_students, query_for_insert_in_bs_user_master)
-                                                        : _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction(query_for_insert_in_bs_route_students, query_for_insert_in_bs_user_master);
+                                                        ? _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction((query_for_update_RFID, updateRfidParams), (query_for_insert_in_bs_route_students, routeStudentParams), (query_for_insert_in_bs_user_master, userMasterParams))
+                                                        : _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction((query_for_insert_in_bs_route_students, routeStudentParams), (query_for_insert_in_bs_user_master, userMasterParams));
 
                                                     if (rowaffected >= 2)
                                                         result += 1;
@@ -1254,8 +1350,11 @@ namespace SchoolBuddy_APIs.Controllers
             try
             {
                 int result = 0;
-                string get_all_students_from_school = $"SELECT * FROM bs_student_master_backup WHERE sys_user_id = {assign_Student.schoolid}";
-                DataTable allstudents = _sql_qury_execution.DML_Select(get_all_students_from_school);
+                string get_all_students_from_school = "SELECT * FROM bs_student_master_backup WHERE sys_user_id = @SchoolId";
+                DataTable allstudents = _sql_qury_execution.DML_Select(get_all_students_from_school, new Dictionary<string, object>
+                {
+                    { "@SchoolId", assign_Student.schoolid }
+                });
 
                 if (allstudents != null && allstudents.Rows.Count > 0)
                 {
@@ -1280,27 +1379,44 @@ namespace SchoolBuddy_APIs.Controllers
                     {
                         foreach (DataRow row in res)
                         {
-                            string getrecord_from_bs_user_master = $"SELECT id FROM bs_user_master WHERE bs_user_name='{row["mobile_no1"]}'";
-                            DataTable dt = _sql_qury_execution.DML_Select(getrecord_from_bs_user_master);
+                            string getrecord_from_bs_user_master = "SELECT id FROM bs_user_master WHERE bs_user_name=@MobileNo1";
+                            DataTable dt = _sql_qury_execution.DML_Select(getrecord_from_bs_user_master, new Dictionary<string, object>
+                            {
+                                { "@MobileNo1", row["mobile_no1"] }
+                            });
 
                             // If RFID is provided, update it; otherwise, don't update the RFID field.
                             string query_for_update_RFID = !string.IsNullOrWhiteSpace(assign_Student.rfid)
-                                ? $@"UPDATE bs_student_master_backup SET rf_id = '{assign_Student.rfid}' WHERE id = {row["Id"]}"
+                                ? @"UPDATE bs_student_master_backup SET rf_id = @RfId WHERE id = @StudentId"
                                 : null;
+                            var updateRfidParams = new Dictionary<string, object>
+                            {
+                                { "@RfId", assign_Student.rfid },
+                                { "@StudentId", row["Id"] }
+                            };
 
-                            string query_for_insert_in_bs_route_students = $@"INSERT INTO bs_route_students
+                            string query_for_insert_in_bs_route_students = @"INSERT INTO bs_route_students
                                                                        (route_id, stop_id, student_id)
-                                                                       VALUES ({assign_Student.route_id}, {assign_Student.stopid}, {row["Id"]})";
+                                                                       VALUES (@RouteId, @StopId, @StudentId)";
+                            var routeStudentParams = new Dictionary<string, object>
+                            {
+                                { "@RouteId", assign_Student.route_id },
+                                { "@StopId", assign_Student.stopid },
+                                { "@StudentId", row["Id"] }
+                            };
 
                             //check is route alerady assigned 
                             // Get requested route name
-                            string requestedRouteQuery = $@"
+                            string requestedRouteQuery = @"
     SELECT route_name
     FROM bs_route_master
-    WHERE id = {assign_Student.route_id}";
+    WHERE id = @RouteId";
 
                             DataTable requestedRoute =
-                                _sql_qury_execution.DML_Select(requestedRouteQuery);
+                                _sql_qury_execution.DML_Select(requestedRouteQuery, new Dictionary<string, object>
+                                {
+                                    { "@RouteId", assign_Student.route_id }
+                                });
 
                             if (requestedRoute == null || requestedRoute.Rows.Count == 0)
                             {
@@ -1322,7 +1438,7 @@ namespace SchoolBuddy_APIs.Controllers
 
 
                             // Get student's existing route + stop assignments
-                            string isAlreadyQuery = $@"
+                            string isAlreadyQuery = @"
     SELECT 
         r.route_id,
         r.stop_id,
@@ -1333,10 +1449,13 @@ namespace SchoolBuddy_APIs.Controllers
         ON m.id = r.route_id
     INNER JOIN bs_stop_master s 
         ON s.id = r.stop_id
-    WHERE r.student_id = {row["Id"]}";
+    WHERE r.student_id = @StudentId";
 
                             DataTable isAlready =
-                                _sql_qury_execution.DML_Select(isAlreadyQuery);
+                                _sql_qury_execution.DML_Select(isAlreadyQuery, new Dictionary<string, object>
+                                {
+                                    { "@StudentId", row["Id"] }
+                                });
 
 
                             if (isAlready != null && isAlready.Rows.Count > 0)
@@ -1395,8 +1514,11 @@ namespace SchoolBuddy_APIs.Controllers
                                 }
                             }
 
-                            string query_to_check_stop = $"SELECT id FROM bs_stop_master WHERE id = {assign_Student.stopid}";
-                            DataTable stops = _sql_qury_execution.DML_Select(query_to_check_stop);
+                            string query_to_check_stop = "SELECT id FROM bs_stop_master WHERE id = @StopId";
+                            DataTable stops = _sql_qury_execution.DML_Select(query_to_check_stop, new Dictionary<string, object>
+                            {
+                                { "@StopId", assign_Student.stopid }
+                            });
 
                             if (stops != null && stops.Rows.Count > 0)
                             {
@@ -1405,21 +1527,26 @@ namespace SchoolBuddy_APIs.Controllers
                                     if (dt != null && dt.Rows.Count > 0)
                                     {
                                         int rowaffected = query_for_update_RFID != null
-                                            ? _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction(query_for_update_RFID, query_for_insert_in_bs_route_students)
-                                            : _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction(query_for_insert_in_bs_route_students);
+                                            ? _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction((query_for_update_RFID, updateRfidParams), (query_for_insert_in_bs_route_students, routeStudentParams))
+                                            : _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction((query_for_insert_in_bs_route_students, routeStudentParams));
 
                                         if (rowaffected >= 1)
                                             result += 1;
                                     }
                                     else if (dt.Rows.Count == 0)
                                     {
-                                        string query_for_insert_in_bs_user_master = $@"INSERT INTO bs_user_master
+                                        string query_for_insert_in_bs_user_master = @"INSERT INTO bs_user_master
                                                                                (sys_user_id, bs_user_name, bs_password)
-                                                                               VALUES ({assign_Student.schoolid}, '{row["mobile_no1"]}', 12345)";
+                                                                               VALUES (@SchoolId, @UserName, 12345)";
+                                        var userMasterParams = new Dictionary<string, object>
+                                        {
+                                            { "@SchoolId", assign_Student.schoolid },
+                                            { "@UserName", row["mobile_no1"] }
+                                        };
 
                                         int rowaffected = query_for_update_RFID != null
-                                            ? _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction(query_for_update_RFID, query_for_insert_in_bs_route_students, query_for_insert_in_bs_user_master)
-                                            : _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction(query_for_insert_in_bs_route_students, query_for_insert_in_bs_user_master);
+                                            ? _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction((query_for_update_RFID, updateRfidParams), (query_for_insert_in_bs_route_students, routeStudentParams), (query_for_insert_in_bs_user_master, userMasterParams))
+                                            : _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction((query_for_insert_in_bs_route_students, routeStudentParams), (query_for_insert_in_bs_user_master, userMasterParams));
 
                                         if (rowaffected >= 2)
                                             result += 1;
@@ -1489,15 +1616,15 @@ namespace SchoolBuddy_APIs.Controllers
                             try
                             {
                                 //  Extract and sanitize fields
-                                string student_name = row["student_name"]?.ToString()?.Replace("'", "''").Trim() ?? "";
-                                string admission_no = row["admission_no"]?.ToString()?.Replace("'", "''").Trim() ?? "";
-                                string mobile_no1 = row["mobile_no1"]?.ToString()?.Replace("'", "''").Trim() ?? "";
+                                string student_name = row["student_name"]?.ToString()?.Trim() ?? "";
+                                string admission_no = row["admission_no"]?.ToString()?.Trim() ?? "";
+                                string mobile_no1 = row["mobile_no1"]?.ToString()?.Trim() ?? "";
                                 string birth_date = row["birth"]?.ToString()?.Trim() ?? "";
-                                string division = row["division"]?.ToString()?.Replace("'", "''").Trim() ?? "";
-                                string parent_name = row["parent_name"]?.ToString()?.Replace("'", "''").Trim() ?? "";
-                                string address = row["address"]?.ToString()?.Replace("'", "''").Trim() ?? "";
-                                string email = row["email"]?.ToString()?.Replace("'", "''").Trim() ?? "";
-                                string class_name = row["class"]?.ToString()?.Replace("'", "''").Trim() ?? "";
+                                string division = row["division"]?.ToString()?.Trim() ?? "";
+                                string parent_name = row["parent_name"]?.ToString()?.Trim() ?? "";
+                                string address = row["address"]?.ToString()?.Trim() ?? "";
+                                string email = row["email"]?.ToString()?.Trim() ?? "";
+                                string class_name = row["class"]?.ToString()?.Trim() ?? "";
 
                                 if (!int.TryParse(class_name, out int classId) || classId < 1 || classId > 18)
                                 {
@@ -1512,15 +1639,19 @@ namespace SchoolBuddy_APIs.Controllers
                                 }
 
                                 //  Convert date format
-                                string formatted_birth_date = "NULL";
+                                object formatted_birth_date = DBNull.Value;
                                 if (DateTime.TryParse(birth_date, out DateTime parsedDate))
                                 {
-                                    formatted_birth_date = $"'{parsedDate:yyyy-MM-dd}'";
+                                    formatted_birth_date = parsedDate.Date;
                                 }
 
                                 // ✅ Check if parent exists in bs_user_master
-                                string queryCheckUser = $"SELECT id FROM bs_user_master WHERE bs_user_name = '{mobile_no1}';";
-                                DataTable userTable = _sql_qury_execution.DML_Select(queryCheckUser);
+                                string queryCheckUser = "SELECT id FROM bs_user_master WHERE bs_user_name = @MobileNo1;";
+                                var checkUserParams = new Dictionary<string, object>
+                                {
+                                    { "@MobileNo1", mobile_no1 }
+                                };
+                                DataTable userTable = _sql_qury_execution.DML_Select(queryCheckUser, checkUserParams);
                                 string parent_id = "";
 
                                 if (userTable != null && userTable.Rows.Count > 0)
@@ -1530,16 +1661,21 @@ namespace SchoolBuddy_APIs.Controllers
                                 else
                                 {
                                     //  Insert new user into bs_user_master
-                                    string insertUserQuery = $@"
-                            INSERT INTO bs_user_master (sys_user_id, role_id, bs_user_name, bs_password, name) 
-                            VALUES ('{user_id}', 1, '{mobile_no1}', '12345', '{parent_name}');";
+                                    string insertUserQuery = @"
+                            INSERT INTO bs_user_master (sys_user_id, role_id, bs_user_name, bs_password, name)
+                            VALUES (@SysUserId, 1, @MobileNo1, '12345', @Name);";
 
-                                    int userInserted = _sql_qury_execution.DML_Insert_Update_Delete(insertUserQuery);
+                                    int userInserted = _sql_qury_execution.DML_Insert_Update_Delete(insertUserQuery, new Dictionary<string, object>
+                                    {
+                                        { "@SysUserId", user_id },
+                                        { "@MobileNo1", mobile_no1 },
+                                        { "@Name", parent_name }
+                                    });
 
                                     if (userInserted > 0)
                                     {
                                         //  Retrieve the newly inserted parent_id
-                                        DataTable newUserTable = _sql_qury_execution.DML_Select(queryCheckUser);
+                                        DataTable newUserTable = _sql_qury_execution.DML_Select(queryCheckUser, checkUserParams);
                                         if (newUserTable != null && newUserTable.Rows.Count > 0)
                                         {
                                             parent_id = newUserTable.Rows[0]["id"].ToString();
@@ -1553,13 +1689,17 @@ namespace SchoolBuddy_APIs.Controllers
                                 }
 
                                 //  Check if student already exists in the same school
-                                string queryCheckStudent = $@"
-                                SELECT id, admission_no 
-                                FROM bs_student_master_backup 
-                                WHERE sys_user_id = '{user_id}' 
-                                  AND admission_no = '{admission_no}'";
+                                string queryCheckStudent = @"
+                                SELECT id, admission_no
+                                FROM bs_student_master_backup
+                                WHERE sys_user_id = @SysUserId
+                                  AND admission_no = @AdmissionNo";
 
-                                DataTable studentTable = _sql_qury_execution.DML_Select(queryCheckStudent);
+                                DataTable studentTable = _sql_qury_execution.DML_Select(queryCheckStudent, new Dictionary<string, object>
+                                {
+                                    { "@SysUserId", user_id },
+                                    { "@AdmissionNo", admission_no }
+                                });
                                 if (studentTable != null && studentTable.Rows.Count > 0)
                                 {
                                     duplicateCount++;
@@ -1568,14 +1708,27 @@ namespace SchoolBuddy_APIs.Controllers
                                 }
 
                                 //  Insert student record
-                                string insertStudentQuery = $@"
-                        INSERT INTO bs_student_master_backup 
-                        (bs_user_id, parent_id, admission_no, student_name, dob, class, section, father_name, mobile_no1, street, email, added_on, sys_user_id) 
-                        VALUES 
-                        ('{parent_id}', '{parent_id}', '{admission_no}', '{student_name}', {formatted_birth_date}, 
-                        '{class_name}', '{division}', '{parent_name}', '{mobile_no1}', '{address}', '{email}', GETDATE(), '{user_id}');";
+                                string insertStudentQuery = @"
+                        INSERT INTO bs_student_master_backup
+                        (bs_user_id, parent_id, admission_no, student_name, dob, class, section, father_name, mobile_no1, street, email, added_on, sys_user_id)
+                        VALUES
+                        (@ParentId, @ParentId, @AdmissionNo, @StudentName, @Dob,
+                        @Class, @Section, @FatherName, @MobileNo1, @Street, @Email, GETDATE(), @SysUserId);";
 
-                                int rowsAffected = _sql_qury_execution.DML_Insert_Update_Delete(insertStudentQuery);
+                                int rowsAffected = _sql_qury_execution.DML_Insert_Update_Delete(insertStudentQuery, new Dictionary<string, object>
+                                {
+                                    { "@ParentId", parent_id },
+                                    { "@AdmissionNo", admission_no },
+                                    { "@StudentName", student_name },
+                                    { "@Dob", formatted_birth_date },
+                                    { "@Class", class_name },
+                                    { "@Section", division },
+                                    { "@FatherName", parent_name },
+                                    { "@MobileNo1", mobile_no1 },
+                                    { "@Street", address },
+                                    { "@Email", email },
+                                    { "@SysUserId", user_id }
+                                });
                                 if (rowsAffected > 0)
                                 {
                                     insertedCount++;
@@ -1786,10 +1939,14 @@ ORDER BY
                 }
 
                 // Step 1: Validate all admission numbers in one query
-                string inClause = string.Join(",", admissionRfidMap.Keys.Select(x => $"'{x}'"));
-                string validateQuery = $"SELECT admission_no FROM bs_student_master_backup WHERE admission_no IN ({inClause}) AND sys_user_id = '{user_id}'";
+                var validateParams = new Dictionary<string, object>
+                {
+                    { "@SysUserId", user_id }
+                };
+                string inClause = SqlParameterHelper.AddInList(validateParams, "AdmissionNo", admissionRfidMap.Keys);
+                string validateQuery = $"SELECT admission_no FROM bs_student_master_backup WHERE admission_no IN ({inClause}) AND sys_user_id = @SysUserId";
 
-                DataTable existing = _sql_qury_execution.DML_Select(validateQuery);
+                DataTable existing = _sql_qury_execution.DML_Select(validateQuery, validateParams);
                 HashSet<string> existingAdmissionNos = new HashSet<string>(
                     existing.AsEnumerable().Select(row => row["admission_no"].ToString())
                 );
@@ -1797,13 +1954,20 @@ ORDER BY
                 // Step 2: Prepare CASE WHEN update block
                 var updateCases = new StringBuilder();
                 var validAdmissionNos = new List<string>();
+                var updateParams = new Dictionary<string, object>
+                {
+                    { "@SysUserId", user_id }
+                };
 
                 foreach (var kvp in admissionRfidMap)
                 {
                     if (existingAdmissionNos.Contains(kvp.Key))
                     {
-                        updateCases.AppendLine($"WHEN '{kvp.Key}' THEN '{kvp.Value}'");
-                        validAdmissionNos.Add($"'{kvp.Key}'");
+                        int i = validAdmissionNos.Count;
+                        updateCases.AppendLine($"WHEN @AdmissionNo{i} THEN @Rfid{i}");
+                        updateParams[$"@AdmissionNo{i}"] = kvp.Key;
+                        updateParams[$"@Rfid{i}"] = kvp.Value;
+                        validAdmissionNos.Add($"@AdmissionNo{i}");
                     }
                     else
                     {
@@ -1819,10 +1983,10 @@ ORDER BY
                     {updateCases.ToString()}
                 END
                 WHERE admission_no IN ({string.Join(",", validAdmissionNos)})
-                  AND sys_user_id = '{user_id}'
+                  AND sys_user_id = @SysUserId
             ";
 
-                    updatedCount = _sql_qury_execution.DML_Insert_Update_Delete(updateQuery);
+                    updatedCount = _sql_qury_execution.DML_Insert_Update_Delete(updateQuery, updateParams);
                 }
 
                 if (updatedCount > 0)

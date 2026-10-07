@@ -37,8 +37,11 @@ namespace SchoolBuddy_APIs.Controllers
                 string json = "";
                 if (user_id != null && bus.database =="newtrack")
                 {
-                    string query = $"select id, veh_reg from services where sys_user_id = '{user_id}'";
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    string query = "select id, veh_reg from services where sys_user_id = @UserId";
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -63,8 +66,11 @@ namespace SchoolBuddy_APIs.Controllers
 
                 else if (user_id != null && bus.database == "atltracking")
                 {
-                    string query = $"select id, veh_reg from atltracking.dbo.tbl_services where sys_user_id = '{user_id}'";
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    string query = "select id, veh_reg from atltracking.dbo.tbl_services where sys_user_id = @UserId";
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -109,10 +115,13 @@ namespace SchoolBuddy_APIs.Controllers
                 string json = "";
                 if (user_id != null && bus.database == "newtrack")
                 {
-                    string query = $"select brm.id,brm.route_name,brm.start_time_up,brm.end_time_up,";
-                    query += $"s.veh_reg,brm.rowcreated from bs_route_master brm inner join services s on brm.sys_service_id = s.id";
-                    query += $" where brm.sys_user_id = '{user_id}'";
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    string query = "select brm.id,brm.route_name,brm.start_time_up,brm.end_time_up,";
+                    query += "s.veh_reg,brm.rowcreated from bs_route_master brm inner join services s on brm.sys_service_id = s.id";
+                    query += " where brm.sys_user_id = @UserId";
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -136,10 +145,13 @@ namespace SchoolBuddy_APIs.Controllers
 
                 else if (user_id != null && bus.database == "atltracking")
                 {
-                    string query = $"select brm.id,brm.route_name,brm.start_time_up,brm.end_time_up,";
-                    query += $"s.veh_reg,brm.rowcreated from bs_route_master brm inner join atltracking.dbo.tbl_services s on brm.sys_service_id = s.id";
-                    query += $" where brm.sys_user_id = '{user_id}'";
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    string query = "select brm.id,brm.route_name,brm.start_time_up,brm.end_time_up,";
+                    query += "s.veh_reg,brm.rowcreated from bs_route_master brm inner join atltracking.dbo.tbl_services s on brm.sys_service_id = s.id";
+                    query += " where brm.sys_user_id = @UserId";
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -188,9 +200,12 @@ namespace SchoolBuddy_APIs.Controllers
                 string json = "";
                 if (user_id != null)
                 {
-                    string query = $"select brm.id,brm.route_name,brm.sys_service_id from bs_route_master brm";
-                    query += $" where brm.sys_user_id = '{user_id}'";
-                    DataTable datatable = _sql_qury_execution.DML_Select(query);
+                    string query = "select brm.id,brm.route_name,brm.sys_service_id from bs_route_master brm";
+                    query += " where brm.sys_user_id = @UserId";
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                    {
+                        { "@UserId", user_id }
+                    });
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -241,20 +256,29 @@ namespace SchoolBuddy_APIs.Controllers
                     return false;
                 }
 
-                string checkDuplicateQuery = $@"
+                string checkDuplicateQuery = @"
             SELECT COUNT(1) AS total
             FROM bs_route_master
-            WHERE sys_user_id = '{route.user_id}'
-              AND LTRIM(RTRIM(LOWER(route_name))) = LTRIM(RTRIM(LOWER('{route.route_name}')))";
-                string checkTimeQuery = $@"
+            WHERE sys_user_id = @UserId
+              AND LTRIM(RTRIM(LOWER(route_name))) = LTRIM(RTRIM(LOWER(@RouteName)))";
+                string checkTimeQuery = @"
 SELECT COUNT(1) as route
 FROM bs_route_master
-WHERE sys_service_id = '{route.service_id}'
-  AND start_time_up < '{route.end_time_up}'
-  AND end_time_up > '{route.start_time_up}'";
+WHERE sys_service_id = @ServiceId
+  AND start_time_up < @EndTimeUp
+  AND end_time_up > @StartTimeUp";
 
-                DataTable checkDt = _sql_qury_execution.DML_Select(checkDuplicateQuery);
-                DataTable checkTime = _sql_qury_execution.DML_Select(checkTimeQuery);
+                DataTable checkDt = _sql_qury_execution.DML_Select(checkDuplicateQuery, new Dictionary<string, object>
+                {
+                    { "@UserId", route.user_id },
+                    { "@RouteName", route.route_name }
+                });
+                DataTable checkTime = _sql_qury_execution.DML_Select(checkTimeQuery, new Dictionary<string, object>
+                {
+                    { "@ServiceId", route.service_id },
+                    { "@EndTimeUp", route.end_time_up },
+                    { "@StartTimeUp", route.start_time_up }
+                });
 
                 if (checkDt != null && checkDt.Rows.Count > 0 || checkTime != null && checkTime.Rows.Count > 0)
                 {
@@ -267,13 +291,20 @@ WHERE sys_service_id = '{route.service_id}'
                     }
                 }
 
-                string query = $"insert into bs_route_master (route_name,sys_service_id,start_time_up,";
-                query += $"end_time_up,sys_user_id,rowcreated,is_Pis_Enabled,is_active) ";
-                query += $"values ";
-                query += $"('{route.route_name}','{route.service_id}','{route.start_time_up}',";
-                query += $"'{route.end_time_up}','{route.user_id}',getdate(),1,1);";
+                string query = "insert into bs_route_master (route_name,sys_service_id,start_time_up,";
+                query += "end_time_up,sys_user_id,rowcreated,is_Pis_Enabled,is_active) ";
+                query += "values ";
+                query += "(@RouteName,@ServiceId,@StartTimeUp,";
+                query += "@EndTimeUp,@UserId,getdate(),1,1);";
 
-                int result = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                int result = _sql_qury_execution.DML_Insert_Update_Delete(query, new Dictionary<string, object>
+                {
+                    { "@UserId", route.user_id },
+                    { "@RouteName", route.route_name },
+                    { "@ServiceId", route.service_id },
+                    { "@EndTimeUp", route.end_time_up },
+                    { "@StartTimeUp", route.start_time_up }
+                });
                 return result > 0;
             }
             catch (Exception ex)
@@ -301,17 +332,25 @@ WHERE sys_service_id = '{route.service_id}'
                 //query += $"start_time_up ='{route.start_time_up}',end_time_up = '{route.end_time_up}',updated_date='{route.rowupdated}' ";
                 //query += $"where id = {route.id}";
 
-                string query = $@"
+                string query = @"
             UPDATE bs_route_master
-               SET route_name    = '{route.route_name}',
-                   start_time_up = '{route.start_time_up}',
-                   end_time_up   = '{route.end_time_up}',
-                   sys_service_id= '{route.service_id}',     
-                   updated_date  = '{route.rowupdated}'
-             WHERE id = {route.id}";
+               SET route_name    = @RouteName,
+                   start_time_up = @StartTimeUp,
+                   end_time_up   = @EndTimeUp,
+                   sys_service_id= @ServiceId,     
+                   updated_date  = @RowUpdated
+             WHERE id = @Id";
                 #endregion
 
-                int result = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                int result = _sql_qury_execution.DML_Insert_Update_Delete(query, new Dictionary<string, object>
+                {
+                    { "@RouteName", route.route_name },
+                    { "@StartTimeUp", route.start_time_up },
+                    { "@EndTimeUp", route.end_time_up },
+                    { "@ServiceId", route.service_id },
+                    { "@RowUpdated", route.rowupdated },
+                    { "@Id", route.id }
+                });
                 if (result > 0)
                 {
                     return true;
@@ -347,16 +386,24 @@ WHERE sys_service_id = '{route.service_id}'
             try
             {
                 #region DELETE Assigned-students QUERY
-                string query_assigned_students = $"delete from bs_route_students where route_id = '{routeid.route_id}'";
+                string query_assigned_students = "delete from bs_route_students where route_id = @RouteId";
                 #endregion
                 #region DELETE stops QUERY
-                string query_stops = $"delete from bs_stop_master where route_id = '{routeid.route_id}'";
+                string query_stops = "delete from bs_stop_master where route_id = @RouteId";
                 #endregion
                 #region DELETE ROUTE QUERY
-                string query_route = $"delete from bs_route_master where id = '{routeid.route_id}'";
+                string query_route = "delete from bs_route_master where id = @RouteId";
                 #endregion
 
-                int result = _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction(query_assigned_students, query_stops, query_route);
+                var routeParams = new Dictionary<string, object>
+                {
+                    { "@RouteId", routeid.route_id }
+                };
+
+                int result = _sql_qury_execution.DML_Insert_Update_Delete_with_Transaction(
+                    (query_assigned_students, routeParams),
+                    (query_stops, routeParams),
+                    (query_route, routeParams));
                 if (result > 0)
                 {
                     return true;
@@ -392,10 +439,13 @@ WHERE sys_service_id = '{route.service_id}'
                 #region GET_ROUTE_ID QUERY
                 //string query = $"select brm.id,brm.route_name,brm.start_time_up,brm.end_time_up,brm.sys_service_id,brm.sys_user_id,s.sys_device_id from bs_route_master  brm inner join services s on s.id = brm.sys_service_id where brm.id = '{routeid.route_id}'";
 
-                string query = $"select id, route_name, start_time_up, end_time_up, sys_service_id, sys_user_id from bs_route_master where id = '{routeid.route_id}'";
+                string query = "select id, route_name, start_time_up, end_time_up, sys_service_id, sys_user_id from bs_route_master where id = @RouteId";
                 #endregion
 
-                DataTable dataTable = _sql_qury_execution.DML_Select(query);
+                DataTable dataTable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@RouteId", routeid.route_id }
+                });
                 if (dataTable != null)
                 {
                     if (dataTable.Rows.Count > 0)
@@ -438,7 +488,7 @@ WHERE sys_service_id = '{route.service_id}'
             try
             {
                 #region GET STUDENTS BY ROUTE ID QUERY
-                string query = $@"
+                string query = @"
             SELECT 
                 bsmb.id,
                 brs.route_id AS routeid, 
@@ -454,11 +504,14 @@ WHERE sys_service_id = '{route.service_id}'
                 JOIN bs_class_master bcm ON bsmb.class = bcm.id
                 JOIN bs_route_students brs ON bsmb.id = brs.student_id
                 JOIN bs_stop_master bsm on bsm.id = brs.stop_id
-                WHERE brs.route_id = '{routeid.route_id}'
+                WHERE brs.route_id = @RouteId
  ORDER BY bsmb.student_name";
                 #endregion
 
-                DataTable dataTable = _sql_qury_execution.DML_Select(query);
+                DataTable dataTable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@RouteId", routeid.route_id }
+                });
 
                 if (dataTable != null && dataTable.Rows.Count > 0)
                 {
@@ -594,7 +647,7 @@ WHERE sys_service_id = '{route.service_id}'
                 //                   AND d.rn = 2
 
                 //";
-                string query = $@"
+                string query = @"
 ;WITH StudentDetails AS
 (
     SELECT
@@ -610,7 +663,7 @@ WHERE sys_service_id = '{route.service_id}'
     FROM bs_student_master_backup bsmb
     JOIN bs_class_master bcm
         ON bsmb.class = bcm.id
-    WHERE bsmb.sys_user_id = '{sys_user_id}'
+    WHERE bsmb.sys_user_id = @SysUserId
 ),
 StudentRoutes AS
 (
@@ -699,7 +752,10 @@ LEFT JOIN StudentRoutes d
     AND d.route_type = 'drop'
     AND d.rn = 1;";
 
-                var dt = _sql_qury_execution.DML_Select(query);
+                var dt = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@SysUserId", sys_user_id }
+                });
                 if (dt != null && dt.Rows.Count > 0)
                 {
                     var list = new List<StudentWiseModel>();
@@ -761,10 +817,13 @@ LEFT JOIN StudentRoutes d
             try
             {
                 #region GETSTUDENTBYID QUERY
-                string query = $"delete  from bs_route_master where id = '{id.user_id}'";
+                string query = "delete  from bs_route_master where id = @Id";
                 #endregion
 
-                DataTable dataTable = _sql_qury_execution.DML_Select(query);
+                DataTable dataTable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@Id", id.user_id }
+                });
                 if (dataTable != null)
                 {
                     if (dataTable.Rows.Count > 0)
@@ -822,14 +881,20 @@ LEFT JOIN StudentRoutes d
             {
                 #region INSERT QUERY
 
-                string query = $"insert into bs_route_vias (Route_id,";
-                query += $"latitude,longitude,via_order) ";
-                query += $"values ";
-                query += $"('{playback.route_id}','{playback.lat}','{playback.lng}',";
-                query += $"'{playback.via_order}');";
+                string query = "insert into bs_route_vias (Route_id,";
+                query += "latitude,longitude,via_order) ";
+                query += "values ";
+                query += "(@RouteId,@Lat,@Lng,";
+                query += "@ViaOrder);";
                 #endregion
 
-                int result = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                int result = _sql_qury_execution.DML_Insert_Update_Delete(query, new Dictionary<string, object>
+                {
+                    { "@RouteId", playback.route_id },
+                    { "@Lat", playback.lat },
+                    { "@Lng", playback.lng },
+                    { "@ViaOrder", playback.via_order }
+                });
                 if (result > 0)
                 {
                     return true;
@@ -875,11 +940,16 @@ LEFT JOIN StudentRoutes d
                 string end_time_ = Convert.ToDateTime(playback.end_date).ToString("yyyy-MM-dd HH:mm:tt");
                 #region GETSTUDENTBYID QUERY
                 string query = $@"select gps_latitude,gps_longitude from {tablename} where 
-                                  sys_proc_time >= '{playback.start_date}' and sys_proc_time<='{start_time_}'
-                                  sys_service_id = '{end_time_}'";
+                                  sys_proc_time >= @StartDate and sys_proc_time<=@StartTime
+                                  sys_service_id = @EndTime";
                 #endregion
 
-                DataTable datatable = _sql_qury_execution.DML_Select(query);
+                DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@StartDate", playback.start_date },
+                    { "@StartTime", start_time_ },
+                    { "@EndTime", end_time_ }
+                });
                 if (datatable != null)
                 {
                     if (datatable.Rows.Count > 0)
@@ -923,15 +993,21 @@ LEFT JOIN StudentRoutes d
 
                     if (device.database.Equals("newtrack", StringComparison.OrdinalIgnoreCase))
                     {
-                        string query = $"select imei from devices d join services s on s.sys_device_id = d.id where s.id = '{device.id}'";//this is service id
-                        var datatable = _sql_qury_execution.DML_Select(query);
+                        string query = "select imei from devices d join services s on s.sys_device_id = d.id where s.id = @ServiceId";//this is service id
+                        var datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                        {
+                            { "@ServiceId", device.id }
+                        });
                         if (datatable != null && datatable.Rows.Count > 0)
                             imei = datatable.Rows[0]["imei"].ToString();
                     }
                     else if (device.database.Equals("atltracking", StringComparison.OrdinalIgnoreCase))
                     {
-                        string query2 = $"select * from atltracking.dbo.tbl_devices d inner join atltracking.dbo.tbl_services s on s.sys_device_id=d.id where s.id = '{device.id}'";
-                        var datatable = _sql_qury_execution.DML_Select(query2);
+                        string query2 = "select * from atltracking.dbo.tbl_devices d inner join atltracking.dbo.tbl_services s on s.sys_device_id=d.id where s.id = @ServiceId";
+                        var datatable = _sql_qury_execution.DML_Select(query2, new Dictionary<string, object>
+                        {
+                            { "@ServiceId", device.id }
+                        });
                         if (datatable != null && datatable.Rows.Count > 0)
                             imei = datatable.Rows[0]["imei"].ToString();
                     }
@@ -971,7 +1047,7 @@ LEFT JOIN StudentRoutes d
                     return BadRequest("Route ID is required.");
                 }
 
-                string query = $@"
+                string query = @"
             SELECT 
                 bsmb.admission_no,
                 bsmb.student_name,
@@ -985,10 +1061,13 @@ LEFT JOIN StudentRoutes d
             JOIN bs_class_master bcm ON TRY_CONVERT(int, bsmb.class) = bcm.id
             JOIN bs_route_students brs ON bsmb.id = brs.student_id
             JOIN bs_stop_master bsm ON bsm.id = brs.stop_id
-            WHERE brs.route_id = '{routeId}'
+            WHERE brs.route_id = @RouteId
             ORDER BY bsmb.student_name";
 
-                DataTable dt = _sql_qury_execution.DML_Select(query);
+                DataTable dt = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
+                {
+                    { "@RouteId", routeId }
+                });
 
                 if (dt == null || dt.Rows.Count == 0)
                 {
@@ -1034,7 +1113,7 @@ LEFT JOIN StudentRoutes d
                     return File(
                         stream.ToArray(),
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        $"AssignedStudents_Route_{routeId}.xlsx"
+                        "AssignedStudents_Route_@RouteId.xlsx"
                     );
                 }
             }
@@ -1103,9 +1182,13 @@ LEFT JOIN StudentRoutes d
                         return Content("The previous pick route and stop assignment is incomplete.", "application/json");
                     }
 
-                    string targetValidationQuery = $@"SELECT COUNT(1) FROM bs_stop_master bsm JOIN bs_route_master brm ON brm.id = bsm.route_id WHERE bsm.id = {currentStopId} AND bsm.route_id = {currentRouteId} AND LOWER(brm.route_name) LIKE '%pick%';";
+                    string targetValidationQuery = @"SELECT COUNT(1) FROM bs_stop_master bsm JOIN bs_route_master brm ON brm.id = bsm.route_id WHERE bsm.id = @CurrentStopId AND bsm.route_id = @CurrentRouteId AND LOWER(brm.route_name) LIKE '%pick%';";
 
-                    DataTable targetValidation = _sql_qury_execution.DML_Select(targetValidationQuery);
+                    DataTable targetValidation = _sql_qury_execution.DML_Select(targetValidationQuery, new Dictionary<string, object>
+                    {
+                        { "@CurrentStopId", currentStopId },
+                        { "@CurrentRouteId", currentRouteId }
+                    });
                     if (targetValidation == null || targetValidation.Rows.Count == 0 ||
                         Convert.ToInt32(targetValidation.Rows[0][0]) != 1)
                     {
@@ -1114,9 +1197,14 @@ LEFT JOIN StudentRoutes d
 
                     if (isInitialAssignment)
                     {
-                        string insertQuery = $@"INSERT INTO bs_route_students (route_id, stop_id, student_id) SELECT {currentRouteId}, {currentStopId}, {studentId} WHERE NOT EXISTS ( SELECT 1 FROM bs_route_students brs JOIN bs_route_master brm ON brm.id = brs.route_id WHERE brs.student_id = {studentId} AND LOWER(brm.route_name) LIKE '%pick%');";
+                        string insertQuery = @"INSERT INTO bs_route_students (route_id, stop_id, student_id) SELECT @CurrentRouteId, @CurrentStopId, @StudentId WHERE NOT EXISTS ( SELECT 1 FROM bs_route_students brs JOIN bs_route_master brm ON brm.id = brs.route_id WHERE brs.student_id = @StudentId AND LOWER(brm.route_name) LIKE '%pick%');";
 
-                        int inserted = _sql_qury_execution.DML_Insert_Update_Delete(insertQuery);
+                        int inserted = _sql_qury_execution.DML_Insert_Update_Delete(insertQuery, new Dictionary<string, object>
+                        {
+                            { "@CurrentStopId", currentStopId },
+                            { "@CurrentRouteId", currentRouteId },
+                            { "@StudentId", studentId }
+                        });
                         if (inserted <= 0)
                         {
                             return Content("A Pick assignment already exists.", "application/json");
@@ -1130,18 +1218,30 @@ LEFT JOIN StudentRoutes d
                             return Content("The previous pick student assignment is invalid.", "application/json");
                         }
 
-                        string validationQuery = $@"SELECT (SELECT COUNT(1) FROM bs_route_students brs JOIN bs_route_master brm ON brm.id = brs.route_id WHERE brs.student_id = {studentId} AND brs.route_id = {previousRouteId} AND brs.stop_id = {previousStopId}) AS previous_assignment_count;";
+                        string validationQuery = @"SELECT (SELECT COUNT(1) FROM bs_route_students brs JOIN bs_route_master brm ON brm.id = brs.route_id WHERE brs.student_id = @StudentId AND brs.route_id = @PreviousRouteId AND brs.stop_id = @PreviousStopId) AS previous_assignment_count;";
 
-                        DataTable validation = _sql_qury_execution.DML_Select(validationQuery);
+                        DataTable validation = _sql_qury_execution.DML_Select(validationQuery, new Dictionary<string, object>
+                        {
+                            { "@StudentId", studentId },
+                            { "@PreviousRouteId", previousRouteId },
+                            { "@PreviousStopId", previousStopId }
+                        });
                         if (validation == null || validation.Rows.Count == 0 ||
                             Convert.ToInt32(validation.Rows[0]["previous_assignment_count"]) != 1)
                         {
                             return Content("The previous pick student assignment no longer matches the database.", "application/json");
                         }
 
-                        string query = $@"UPDATE bs_route_students SET route_id = {currentRouteId}, stop_id = {currentStopId} WHERE student_id = {studentId} AND route_id = {previousRouteId} AND stop_id = {previousStopId};";
+                        string query = @"UPDATE bs_route_students SET route_id = @CurrentRouteId, stop_id = @CurrentStopId WHERE student_id = @StudentId AND route_id = @PreviousRouteId AND stop_id = @PreviousStopId;";
 
-                        int response = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                        int response = _sql_qury_execution.DML_Insert_Update_Delete(query, new Dictionary<string, object>
+                        {
+                            { "@CurrentStopId", currentStopId },
+                            { "@CurrentRouteId", currentRouteId },
+                            { "@StudentId", studentId },
+                            { "@PreviousRouteId", previousRouteId },
+                            { "@PreviousStopId", previousStopId }
+                        });
                         if (response <= 0)
                         {
                             return Content("Pick route data Not Updated use Different Combination", "application/json");
@@ -1167,9 +1267,13 @@ LEFT JOIN StudentRoutes d
                         return Content("The previous drop route and stop assignment is incomplete.", "application/json");
                     }
 
-                    string targetValidationQuery = $@"SELECT COUNT(1) FROM bs_stop_master bsm JOIN bs_route_master brm ON brm.id = bsm.route_id WHERE bsm.id = {currentStopId} AND bsm.route_id = {currentRouteId} AND LOWER(brm.route_name) LIKE '%drop%';";
+                    string targetValidationQuery = @"SELECT COUNT(1) FROM bs_stop_master bsm JOIN bs_route_master brm ON brm.id = bsm.route_id WHERE bsm.id = @CurrentStopId AND bsm.route_id = @CurrentRouteId AND LOWER(brm.route_name) LIKE '%drop%';";
 
-                    DataTable targetValidation = _sql_qury_execution.DML_Select(targetValidationQuery);
+                    DataTable targetValidation = _sql_qury_execution.DML_Select(targetValidationQuery, new Dictionary<string, object>
+                    {
+                        { "@CurrentStopId", currentStopId },
+                        { "@CurrentRouteId", currentRouteId }
+                    });
                     if (targetValidation == null || targetValidation.Rows.Count == 0 ||
                         Convert.ToInt32(targetValidation.Rows[0][0]) != 1)
                     {
@@ -1178,9 +1282,14 @@ LEFT JOIN StudentRoutes d
 
                     if (isInitialAssignment)
                     {
-                        string insertQuery = $@"INSERT INTO bs_route_students (route_id, stop_id, student_id) SELECT {currentRouteId}, {currentStopId}, {studentId} WHERE NOT EXISTS ( SELECT 1 FROM bs_route_students brs JOIN bs_route_master brm ON brm.id = brs.route_id WHERE brs.student_id = {studentId} AND LOWER(brm.route_name) LIKE '%drop%');";
+                        string insertQuery = @"INSERT INTO bs_route_students (route_id, stop_id, student_id) SELECT @CurrentRouteId, @CurrentStopId, @StudentId WHERE NOT EXISTS ( SELECT 1 FROM bs_route_students brs JOIN bs_route_master brm ON brm.id = brs.route_id WHERE brs.student_id = @StudentId AND LOWER(brm.route_name) LIKE '%drop%');";
 
-                        int inserted = _sql_qury_execution.DML_Insert_Update_Delete(insertQuery);
+                        int inserted = _sql_qury_execution.DML_Insert_Update_Delete(insertQuery, new Dictionary<string, object>
+                        {
+                            { "@CurrentStopId", currentStopId },
+                            { "@CurrentRouteId", currentRouteId },
+                            { "@StudentId", studentId }
+                        });
                         if (inserted <= 0)
                         {
                             return Content("A Drop assignment already exists.", "application/json");
@@ -1194,18 +1303,30 @@ LEFT JOIN StudentRoutes d
                             return Content("The previous drop student assignment is invalid.", "application/json");
                         }
 
-                        string validationQuery = $@"SELECT (SELECT COUNT(1) FROM bs_route_students brs JOIN bs_route_master brm ON brm.id = brs.route_id WHERE brs.student_id = {studentId} AND brs.route_id = {previousRouteId} AND brs.stop_id = {previousStopId}) AS previous_assignment_count;";
+                        string validationQuery = @"SELECT (SELECT COUNT(1) FROM bs_route_students brs JOIN bs_route_master brm ON brm.id = brs.route_id WHERE brs.student_id = @StudentId AND brs.route_id = @PreviousRouteId AND brs.stop_id = @PreviousStopId) AS previous_assignment_count;";
 
-                        DataTable validation = _sql_qury_execution.DML_Select(validationQuery);
+                        DataTable validation = _sql_qury_execution.DML_Select(validationQuery, new Dictionary<string, object>
+                        {
+                            { "@StudentId", studentId },
+                            { "@PreviousRouteId", previousRouteId },
+                            { "@PreviousStopId", previousStopId }
+                        });
                         if (validation == null || validation.Rows.Count == 0 ||
                             Convert.ToInt32(validation.Rows[0]["previous_assignment_count"]) != 1)
                         {
                             return Content("The previous drop student assignment no longer matches the database.", "application/json");
                         }
 
-                        string query = $@"UPDATE bs_route_students SET route_id = {currentRouteId}, stop_id = {currentStopId} WHERE student_id = {studentId} AND route_id = {previousRouteId} AND stop_id = {previousStopId};";
+                        string query = @"UPDATE bs_route_students SET route_id = @CurrentRouteId, stop_id = @CurrentStopId WHERE student_id = @StudentId AND route_id = @PreviousRouteId AND stop_id = @PreviousStopId;";
 
-                        int response = _sql_qury_execution.DML_Insert_Update_Delete(query);
+                        int response = _sql_qury_execution.DML_Insert_Update_Delete(query, new Dictionary<string, object>
+                        {
+                            { "@CurrentStopId", currentStopId },
+                            { "@CurrentRouteId", currentRouteId },
+                            { "@StudentId", studentId },
+                            { "@PreviousRouteId", previousRouteId },
+                            { "@PreviousStopId", previousStopId }
+                        });
                         if (response <= 0)
                         {
                             return Content("Drop route data Not Updated use Different Combination", "application/json");
@@ -1369,10 +1490,13 @@ LEFT JOIN StudentRoutes d
         {
             try
             {
-                string query = $@"
+                string query = @"
 DELETE FROM bs_route_students 
-WHERE student_id = {id}";
-                var response = _sql_qury_execution.DML_Insert_Update_Delete(query);
+WHERE student_id = @StudentId";
+                var response = _sql_qury_execution.DML_Insert_Update_Delete(query, new Dictionary<string, object>
+                {
+                    { "@StudentId", id }
+                });
 
                 if (response > 0)
                 {

@@ -143,16 +143,32 @@ namespace SchoolBuddy_APIs
         }
 
 
-        public string insert_student(getstudent students,string parent_id)
+        public (string query, Dictionary<string, object> parameters) insert_student(getstudent students,string parent_id)
         {
-            string query = $"insert into bs_student_master_backup (parent_id,admission_no,student_name,dob,class,section,";
-            query += $"father_name,mobile_no1,street,rf_id,email,added_on,sys_user_id) ";
-            query += $"values ";
-            query += $"('{parent_id}','{students.admission_no}','{students.student_name}','{students.birth}',";
-            query += $"'{students.class_}','{students.division}','{students.parent_name}','{students.mobile_no1}',";
-            query += $"'{students.street}','{students.rf_id}','{students.email}',";
-            query += $"getdate(),'{students.user_id}');";
-            return query;
+            string query = "insert into bs_student_master_backup (parent_id,admission_no,student_name,dob,class,section,";
+            query += "father_name,mobile_no1,street,rf_id,email,added_on,sys_user_id) ";
+            query += "values ";
+            query += "(@ParentId,@AdmissionNo,@StudentName,@Dob,";
+            query += "@Class,@Section,@FatherName,@MobileNo1,";
+            query += "@Street,@RfId,@Email,";
+            query += "getdate(),@SysUserId);";
+
+            var parameters = new Dictionary<string, object>
+            {
+                { "@ParentId", parent_id },
+                { "@AdmissionNo", students.admission_no },
+                { "@StudentName", students.student_name },
+                { "@Dob", students.birth },
+                { "@Class", students.class_ },
+                { "@Section", students.division },
+                { "@FatherName", students.parent_name },
+                { "@MobileNo1", students.mobile_no1 },
+                { "@Street", students.street },
+                { "@RfId", students.rf_id },
+                { "@Email", students.email },
+                { "@SysUserId", students.user_id }
+            };
+            return (query, parameters);
         }
 
 
