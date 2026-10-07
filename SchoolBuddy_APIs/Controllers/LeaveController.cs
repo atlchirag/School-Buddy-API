@@ -167,7 +167,7 @@ WHERE l.id = @LeaveId
                 string updateQuery = $@"
 UPDATE bs_leave_master
 SET is_approved = {request.status},
-    is_pending = 1,
+    ispending = 1,
     remark = {(remark == "" ? "NULL" : $"'{remark.Replace("'", "''")}'")},
     action_by = {schoolId},
     action_on = GETDATE()
