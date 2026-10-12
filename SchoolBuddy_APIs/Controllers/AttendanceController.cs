@@ -116,6 +116,7 @@ AttendancePunches AS
 
     INNER JOIN {servicesTable} s
         ON s.id = r.sys_service_id
+        AND s.sys_renewal_due >= GETDATE()
 
     WHERE s.sys_user_id = @UserId
       AND r.rfid IS NOT NULL
@@ -317,6 +318,7 @@ LastStudentAttendance AS
 
     INNER JOIN {servicesTable} s
         ON s.id = r.sys_service_id
+        AND s.sys_renewal_due >= GETDATE()
 
     WHERE s.sys_user_id = @UserId
       AND r.rfid IS NOT NULL

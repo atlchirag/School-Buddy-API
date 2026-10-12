@@ -189,7 +189,7 @@ WHERE bsmb.sys_user_id = @UserId";
             SELECT COUNT(*) 
             FROM [atltracking].[dbo].tbl_services s
             INNER JOIN [atltracking].[dbo].tbl_devices d ON d.id = s.sys_device_id
-            WHERE s.sys_user_id = @UserId";
+            WHERE s.sys_user_id = @UserId AND s.sys_renewal_due >= GETDATE()";
 
             //    string query1 = $@"
             //SELECT COUNT(*) 
@@ -476,7 +476,7 @@ WHERE bsmb.sys_user_id = @UserId";
                                         inner join 
                                         services 
                                         on services.id = lt.sys_service_id
-                                        where services.sys_user_id = @UserId
+                                        where services.sys_user_id = @UserId and services.sys_renewal_due >= GETDATE()
                                         and lt.gps_speed >0 and CAST(lt.sys_proc_time AS DATE) = CAST(GETDATE() AS DATE);";
                     }
                     else if (database == "atltracking")
@@ -486,7 +486,7 @@ WHERE bsmb.sys_user_id = @UserId";
                                          inner join 
                                          atltracking.dbo.tbl_services s
                                          on s.id = lt.sys_service_id
-                                         where s.sys_user_id = @UserId
+                                         where s.sys_user_id = @UserId and s.sys_renewal_due >= GETDATE()
                                          and lt.gps_speed >0 and CAST(lt.sys_proc_time AS DATE) = CAST(GETDATE() AS DATE);";
                     }
                     else
@@ -829,7 +829,7 @@ LEFT JOIN bs_route_master brm
 LEFT JOIN latest_telemetry lt
     ON lt.sys_service_id = s.id
 
-WHERE s.sys_user_id = @UserId
+WHERE s.sys_user_id = @UserId AND s.sys_renewal_due >= GETDATE()
 
 ORDER BY
     CASE
@@ -851,12 +851,16 @@ ORDER BY
     s.id AS sys_service_id,
     s.veh_reg,
     d.imei,
-    ISNULL(brm.route_name, '-') AS route_name,
 
+    -- Route assignment belongs in route_name, not in vehicle_status.
     CASE
         WHEN brm.sys_service_id IS NULL
             THEN 'Not Assigned'
+        ELSE brm.route_name
+    END AS route_name,
 
+    -- Running state only: Live / Idle / Stopped / Offline.
+    CASE
         WHEN lt.sys_service_id IS NULL
             THEN 'Offline'
 
@@ -885,7 +889,7 @@ LEFT JOIN bs_route_master brm
 LEFT JOIN atltracking.dbo.tbl_latest_telemetry lt
     ON lt.sys_service_id = s.id
 
-WHERE s.sys_user_id = @UserId
+WHERE s.sys_user_id = @UserId AND s.sys_renewal_due >= GETDATE()
 
 ORDER BY s.veh_reg;";
                     }
@@ -970,7 +974,7 @@ ORDER BY s.veh_reg;";
 										inner join
 										devices d
 										on services.sys_device_id = d.id
-                                        where services.sys_user_id = @UserId
+                                        where services.sys_user_id = @UserId and services.sys_renewal_due >= GETDATE()
                                         and lt.gps_speed >0  AND CAST(lt.sys_proc_time AS DATE) = CAST(GETDATE() AS DATE);";
                     }
                     else if (database == "atltracking")
@@ -985,7 +989,7 @@ ORDER BY s.veh_reg;";
 										left join
 										atltracking.dbo.tbl_devices d
 										on s.sys_device_id = d.id
-                                        where s.sys_user_id = @UserId
+                                        where s.sys_user_id = @UserId and s.sys_renewal_due >= GETDATE()
                                         and lt.gps_speed >0 and
                                          CAST(lt.sys_proc_time AS DATE) = CAST(GETDATE() AS DATE);";
                     }
@@ -1050,16 +1054,13 @@ ORDER BY s.veh_reg;";
 
                 if (user_id != null)
                 {
-                    string query = @"select count(*) from latest_telemetry lt
+                    string query = @"select count(*) from tbl_latest_telemetry lt
                                         inner join 
-                                        services 
-                                        on services.id = lt.sys_service_id
-                                        where services.sys_user_id = @UserId
+                                        tbl_services 
+                                        on tbl_services.id = lt.sys_service_id
+                                        where tbl_services.sys_user_id = @UserId and tbl_services.sys_renewal_due >= GETDATE()
                                         and lt.gps_speed =0 and lt.i2 = 0";
-                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
-                    {
-                        { "@UserId", user_id }
-                    });
+                    DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>{{ "@UserId", user_id }});
                     if (datatable != null)
                     {
                         if (datatable.Rows.Count > 0)
@@ -1106,11 +1107,11 @@ ORDER BY s.veh_reg;";
 
                 if (user_id != null)
                 {
-                    string query = @"select count(*) from latest_telemetry lt
+                    string query = @"select count(*) from tbl_latest_telemetry lt
                                         inner join 
-                                        services 
-                                        on services.id = lt.sys_service_id
-                                        where services.sys_user_id = @UserId
+                                        tbl_services 
+                                        on tbl_services.id = lt.sys_service_id
+                                        where tbl_services.sys_user_id = @UserId and tbl_services.sys_renewal_due >= GETDATE()
                                         and lt.gps_speed =0 and lt.i2 = 1";
                     DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
                     {
@@ -1681,6 +1682,7 @@ DECLARE @ToDateTime DATETIME = @ToDateTimeParam;
     INNER JOIN atltracking.dbo.tbl_services s
         ON s.id = rf.sys_service_id
        AND s.sys_user_id = @UserId
+       AND s.sys_renewal_due >= GETDATE()
 
     LEFT JOIN bs_student_master_backup sm
         ON sm.rf_id = rf.rfid
@@ -1919,7 +1921,7 @@ OUTER APPLY
 ) dml
 
 LEFT JOIN [atltracking].[dbo].[tbl_services] s
-    ON s.id = dml.service_id
+    ON s.id = dml.service_id AND s.sys_renewal_due >= GETDATE()
 
 LEFT JOIN [atltracking].[dbo].[tbl_latest_telemetry] lt
     ON lt.sys_service_id = s.id
@@ -2329,7 +2331,7 @@ DECLARE @CurrentTime TIME = CAST(GETDATE() AS TIME);
        VEHICLE / SERVICE
        ========================= */
     LEFT JOIN {servicesTable} s
-        ON s.id = brm.sys_service_id
+        ON s.id = brm.sys_service_id AND s.sys_renewal_due >= GETDATE()
 
     /* =========================
        STUDENT COUNT
@@ -2597,7 +2599,7 @@ SELECT
 FROM {latestTelemetryTable} t
 
 INNER JOIN {servicesTable} s
-    ON s.id = t.sys_service_id
+    ON s.id = t.sys_service_id AND s.sys_renewal_due >= GETDATE()
 inner join bs_route_master rm on rm.sys_service_id=s.id
 WHERE s.sys_user_id = @SysUserId
   AND t.sys_proc_time >= CONVERT(DATE, GETDATE())

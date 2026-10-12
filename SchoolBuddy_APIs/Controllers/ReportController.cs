@@ -244,7 +244,7 @@ namespace SchoolBuddy_APIs.Controllers
                     query.Append($"SELECT s.veh_reg as Vehicle, dateadd(minute,-330,t.gps_time) as last_updated ");
                     query.Append($"FROM tbl_latest_telemetry t, services s ");
                     query.Append($"WHERE datediff(day,t.gps_time, dateadd(minute,-330,GETDATE()))>=1 ");
-                    query.Append("and t.sys_service_id in (select id from services where sys_user_id=@UserId) and t.sys_service_id=s.id");
+                    query.Append("and t.sys_service_id in (select id from services where sys_user_id=@UserId) and t.sys_service_id=s.id and s.sys_renewal_due >= GETDATE()");
                     
 
                     DataTable datatable = _sql_qury_execution.DML_Select(query.ToString(), new Dictionary<string, object>
@@ -600,6 +600,7 @@ DatePunches AS
     INNER JOIN {servicesTable} s
         ON s.id = rf.sys_service_id
        AND s.sys_user_id = @UserId
+       AND s.sys_renewal_due >= GETDATE()
 
     LEFT JOIN bs_student_master_backup sm
         ON sm.rf_id = rf.rfid
@@ -1183,6 +1184,7 @@ OPTION(RECOMPILE);
 
     INNER JOIN {servicesTable} s
         ON s.id = r.sys_service_id
+        AND s.sys_renewal_due >= GETDATE()
 
     LEFT JOIN bs_student_master_backup bsmb
         ON bsmb.id = r.student_id

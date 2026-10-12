@@ -784,7 +784,7 @@ WHERE bs_student_master_backup.email = @Email
                 inner join bs_class_master bcm on bsmb.class = bcm.id
                 inner join bs_route_students brs on bsmb.id = brs.student_id
                 inner join bs_route_master brm on brm.id = brs.route_id
-                inner join services on brm.sys_service_id = services.id
+                inner join services on brm.sys_service_id = services.id and services.sys_renewal_due >= GETDATE()
                 left join bs_driver bd on services.id = bd.sys_service_id
                 where bsmb.bs_user_id = @ParentId
                    or bsmb.parent_id = @ParentId";
@@ -800,7 +800,7 @@ WHERE bs_student_master_backup.email = @Email
                 left join atltracking.dbo.bs_class_master bcm on bsmb.class = bcm.id
                 left join atltracking.dbo.bs_route_students brs on bsmb.id = brs.student_id
                 left join atltracking.dbo.bs_route_master brm on brm.id = brs.route_id
-                left join atltracking.dbo.tbl_services s on brm.sys_service_id = s.id
+                left join atltracking.dbo.tbl_services s on brm.sys_service_id = s.id and s.sys_renewal_due >= GETDATE()
  left join atltracking.dbo.tbl_driver_master bd on s.id = bd.service_id
 where bsmb.bs_user_id = @ParentId
                    or bsmb.parent_id = @ParentId";
@@ -1219,7 +1219,7 @@ where bsmb.bs_user_id = @ParentId
                 string schoolQuery = @"
             SELECT TOP 1 sys_user_id 
             FROM services 
-            WHERE id = @ServiceId";
+            WHERE id = @ServiceId AND sys_renewal_due >= GETDATE()";
 
                 DataTable schDT = _sql_qury_execution.DML_Select(schoolQuery, new Dictionary<string, object>
                 {

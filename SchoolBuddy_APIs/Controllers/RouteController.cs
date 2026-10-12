@@ -37,7 +37,7 @@ namespace SchoolBuddy_APIs.Controllers
                 string json = "";
                 if (user_id != null && bus.database =="newtrack")
                 {
-                    string query = "select id, veh_reg from services where sys_user_id = @UserId";
+                    string query = "select id, veh_reg from services where sys_user_id = @UserId and sys_renewal_due >= GETDATE()";
                     DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
                     {
                         { "@UserId", user_id }
@@ -66,7 +66,7 @@ namespace SchoolBuddy_APIs.Controllers
 
                 else if (user_id != null && bus.database == "atltracking")
                 {
-                    string query = "select id, veh_reg from atltracking.dbo.tbl_services where sys_user_id = @UserId";
+                    string query = "select id, veh_reg from atltracking.dbo.tbl_services where sys_user_id = @UserId and sys_renewal_due >= GETDATE()";
                     DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
                     {
                         { "@UserId", user_id }
@@ -116,7 +116,7 @@ namespace SchoolBuddy_APIs.Controllers
                 if (user_id != null && bus.database == "newtrack")
                 {
                     string query = "select brm.id,brm.route_name,brm.start_time_up,brm.end_time_up,";
-                    query += "s.veh_reg,brm.rowcreated from bs_route_master brm inner join services s on brm.sys_service_id = s.id";
+                    query += "s.veh_reg,brm.rowcreated from bs_route_master brm inner join services s on brm.sys_service_id = s.id and s.sys_renewal_due >= GETDATE()";
                     query += " where brm.sys_user_id = @UserId";
                     DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
                     {
@@ -146,7 +146,7 @@ namespace SchoolBuddy_APIs.Controllers
                 else if (user_id != null && bus.database == "atltracking")
                 {
                     string query = "select brm.id,brm.route_name,brm.start_time_up,brm.end_time_up,";
-                    query += "s.veh_reg,brm.rowcreated from bs_route_master brm inner join atltracking.dbo.tbl_services s on brm.sys_service_id = s.id";
+                    query += "s.veh_reg,brm.rowcreated from bs_route_master brm inner join atltracking.dbo.tbl_services s on brm.sys_service_id = s.id and s.sys_renewal_due >= GETDATE()";
                     query += " where brm.sys_user_id = @UserId";
                     DataTable datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
                     {
@@ -993,7 +993,7 @@ LEFT JOIN StudentRoutes d
 
                     if (device.database.Equals("newtrack", StringComparison.OrdinalIgnoreCase))
                     {
-                        string query = "select imei from devices d join services s on s.sys_device_id = d.id where s.id = @ServiceId";//this is service id
+                        string query = "select imei from devices d join services s on s.sys_device_id = d.id where s.id = @ServiceId and s.sys_renewal_due >= GETDATE()";//this is service id
                         var datatable = _sql_qury_execution.DML_Select(query, new Dictionary<string, object>
                         {
                             { "@ServiceId", device.id }
@@ -1003,7 +1003,7 @@ LEFT JOIN StudentRoutes d
                     }
                     else if (device.database.Equals("atltracking", StringComparison.OrdinalIgnoreCase))
                     {
-                        string query2 = "select * from atltracking.dbo.tbl_devices d inner join atltracking.dbo.tbl_services s on s.sys_device_id=d.id where s.id = @ServiceId";
+                        string query2 = "select * from atltracking.dbo.tbl_devices d inner join atltracking.dbo.tbl_services s on s.sys_device_id=d.id where s.id = @ServiceId and s.sys_renewal_due >= GETDATE()";
                         var datatable = _sql_qury_execution.DML_Select(query2, new Dictionary<string, object>
                         {
                             { "@ServiceId", device.id }
